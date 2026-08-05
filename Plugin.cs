@@ -11,7 +11,7 @@ namespace FacilityJobs
 
         public override string Name => "FacilityJobs";
         public override string Author => "Herzog-XI";
-        public override Version Version => new Version(0, 3, 0);
+        public override Version Version => new Version(0, 4, 0);
         public override Version RequiredExiledVersion => new Version(9, 14, 2);
 
         internal SerpentsHandSpawnManager SerpentsHandSpawnManager { get; private set; }
