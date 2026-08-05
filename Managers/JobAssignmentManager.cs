@@ -28,6 +28,11 @@ namespace FacilityJobs.Managers
             Debug($"Captured {scientistSpawnPositions.Count} Scientist spawn position(s).");
         }
 
+        public static bool HasFacilityJob(Player player)
+        {
+            return player != null && CustomRole.Registered.Any(role => IsFacilityJob(role) && role.Check(player));
+        }
+
         public static bool Assign(Player player, CustomRole role, out string error)
         {
             error = null;
@@ -37,27 +42,64 @@ namespace FacilityJobs.Managers
                 return false;
             }
 
-            if (role == null)
+            if (role == null || !IsFacilityJob(role))
             {
                 error = "Job is not registered.";
                 return false;
             }
 
-            Vector3 targetPosition;
-            if (!TryGetSpawnPosition(role, out targetPosition))
+            if (HasFacilityJob(player))
+            {
+                error = "Dieser Spieler besitzt bereits einen Facility-Job.";
+                return false;
+            }
+
+            if (!HasRequiredBaseRole(player, role, out error))
+                return false;
+
+            if (!TryGetSpawnPosition(role, out Vector3 targetPosition))
             {
                 error = $"No valid spawn position found for {role.Name}.";
                 return false;
             }
 
-            RoleTypeId requiredRole = role.Role;
-            bool requiresRoleChange = requiredRole != RoleTypeId.None && player.Role.Type != requiredRole;
-
+            // Base-role validation guarantees that no vanilla role change is needed.
             role.AddRole(player);
-
-            float delay = requiresRoleChange ? 0.45f : 0.1f;
-            Timing.CallDelayed(delay, () => FinalizeAssignment(player, role, targetPosition));
+            Timing.CallDelayed(0.1f, () => FinalizeAssignment(player, role, targetPosition));
             return true;
+        }
+
+        private static bool HasRequiredBaseRole(Player player, CustomRole role, out string error)
+        {
+            error = null;
+
+            if (role is HausmeisterRole && player.Role.Type != RoleTypeId.ClassD)
+            {
+                error = "Der Hausmeister kann nur einer D-Klasse zugewiesen werden.";
+                return false;
+            }
+
+            if ((role is ZoneManagerRole || role is CiAgentRole) && player.Role.Type != RoleTypeId.Scientist)
+            {
+                error = "Dieser Job kann nur einem Wissenschaftler zugewiesen werden.";
+                return false;
+            }
+
+            if (role is SerpentsHandCustomRole && player.Role.Type != RoleTypeId.Tutorial)
+            {
+                error = "Eine Serpent's-Hand-Klasse kann manuell nur einem Tutorial zugewiesen werden.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsFacilityJob(CustomRole role)
+        {
+            return role is ZoneManagerRole ||
+                   role is HausmeisterRole ||
+                   role is CiAgentRole ||
+                   role is SerpentsHandCustomRole;
         }
 
         private static void FinalizeAssignment(Player player, CustomRole role, Vector3 targetPosition)
@@ -68,8 +110,6 @@ namespace FacilityJobs.Managers
             player.Position = targetPosition;
             player.CustomInfo = role.CustomInfo ?? string.Empty;
 
-            // The custom-role description is the role/class text. Show it immediately as
-            // well, so players receive the correct information at the moment of assignment.
             if (!string.IsNullOrWhiteSpace(role.Description))
                 player.ShowHint(role.Description, 12f);
 
@@ -87,8 +127,6 @@ namespace FacilityJobs.Managers
             if (role is HausmeisterRole || role is CiAgentRole)
                 return TryGetScientistSpawn(out position);
 
-            // SH wave spawns are managed as one formation by SerpentsHandSpawnManager.
-            // For manual administration, place a single SH member in a configured SH room.
             if (role is SerpentsHandCustomRole)
                 return TryGetSerpentsHandRoom(out position);
 
