@@ -1,6 +1,7 @@
 using System;
 using Exiled.API.Features;
 using FacilityJobs.Events;
+using FacilityJobs.Roles;
 using FacilityJobs.SerpentsHand;
 using HarmonyLib;
 
@@ -12,7 +13,7 @@ namespace FacilityJobs
 
         public override string Name => "FacilityJobs";
         public override string Author => "Herzog-XI";
-        public override Version Version => new Version(0, 5, 0);
+        public override Version Version => new Version(0, 6, 0);
         public override Version RequiredExiledVersion => new Version(9, 14, 2);
 
         internal SerpentsHandSpawnManager SerpentsHandSpawnManager { get; private set; }
@@ -25,6 +26,7 @@ namespace FacilityJobs
         public override void OnEnabled()
         {
             Instance = this;
+            RoleRegistry.Register();
 
             harmony = new Harmony($"facilityjobs.{DateTime.UtcNow.Ticks}");
             harmony.PatchAll();
@@ -52,6 +54,7 @@ namespace FacilityJobs
 
             harmony?.UnpatchAll(harmony.Id);
             harmony = null;
+            RoleRegistry.Unregister();
 
             serpentsHandEvents = null;
             ciAgentEvents = null;
