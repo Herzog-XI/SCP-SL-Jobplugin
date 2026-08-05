@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -36,6 +37,36 @@ namespace FacilityJobs.Roles
             registeredRoles.Unregister();
             registeredRoles.Clear();
         }
+
+        public static bool TryGet(string value, out CustomRole role)
+        {
+            role = null;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            string normalized = Normalize(value);
+            role = registeredRoles.FirstOrDefault(r =>
+                r.Id.ToString() == value ||
+                Normalize(r.Name) == normalized ||
+                Normalize(GetShortName(r)) == normalized);
+
+            return role != null;
+        }
+
+        private static string GetShortName(CustomRole role)
+        {
+            if (role is ZoneManagerRole) return "zonenmanager";
+            if (role is HausmeisterRole) return "hausmeister";
+            if (role is CiAgentRole) return "ciagent";
+            if (role is WardenRole) return "warden";
+            if (role is WraithRole) return "wraith";
+            if (role is SeekerRole) return "seeker";
+            if (role is InfiltratorRole) return "infiltrator";
+            return role.Name;
+        }
+
+        private static string Normalize(string value) =>
+            new string(value.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
 
         private static T Get<T>() where T : CustomRole
         {
