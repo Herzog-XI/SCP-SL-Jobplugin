@@ -38,6 +38,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FacilityJobs
-          path: bin/x64/Release/FacilityJobs.dll
+          path: |
+            bin/**/Release/**/FacilityJobs.dll
+            bin/**/Release/FacilityJobs.dll
           if-no-files-found: error
           retention-days: 14
