@@ -71,7 +71,10 @@ namespace FacilityJobs.Managers
                 return;
 
             List<Player> classD = Player.List
-                .Where(p => p != null && p.IsConnected && p.Role.Type == RoleTypeId.ClassD)
+                .Where(p => p != null &&
+                            p.IsConnected &&
+                            p.Role.Type == RoleTypeId.ClassD &&
+                            !JobAssignmentManager.HasFacilityJob(p))
                 .ToList();
 
             int desiredCount = Player.List.Count() >= Math.Max(1, Plugin.Instance.Config.PlayersForSecondHausmeister) ? 2 : 1;
@@ -95,7 +98,7 @@ namespace FacilityJobs.Managers
             .Where(p => p != null &&
                         p.IsConnected &&
                         p.Role.Type == RoleTypeId.Scientist &&
-                        string.IsNullOrEmpty(p.CustomInfo))
+                        !JobAssignmentManager.HasFacilityJob(p))
             .ToList();
 
         private static T TakeRandom<T>(IReadOnlyList<T> values) =>
