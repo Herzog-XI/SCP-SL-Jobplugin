@@ -21,6 +21,7 @@ namespace FacilityJobs.Managers
                     return;
 
                 AssignZoneManager();
+                AssignCiAgent();
                 AssignHausmeister();
             }
             catch (Exception exception)
@@ -34,10 +35,7 @@ namespace FacilityJobs.Managers
             if (!RoundState.ZoneManagerSelected)
                 return;
 
-            List<Player> scientists = Player.List
-                .Where(player => player != null && player.IsConnected && player.Role.Type == RoleTypeId.Scientist)
-                .ToList();
-
+            List<Player> scientists = GetUnassignedScientists();
             if (scientists.Count == 0)
             {
                 Debug("Zone Manager was selected, but no Scientist was available.");
@@ -65,6 +63,34 @@ namespace FacilityJobs.Managers
                 "Nutze deine Zugriffsrechte, unterstütze die Foundation und finde einen Weg aus der Anlage.</color>");
 
             Debug($"Zone Manager assigned to {player.Nickname} in {room.Type}.");
+        }
+
+        private static void AssignCiAgent()
+        {
+            if (!RoundState.CiAgentSelected)
+                return;
+
+            List<Player> scientists = GetUnassignedScientists();
+            if (scientists.Count == 0)
+            {
+                Debug("CI Agent was selected, but no unassigned Scientist was available.");
+                return;
+            }
+
+            Player player = TakeRandom(scientists);
+            player.ClearInventory();
+            player.AddItem(ItemType.KeycardScientist);
+            player.CustomInfo = "Wissenschaftler";
+            RoundState.CiAgentUserId = player.UserId;
+
+            player.Broadcast(
+                RoleBroadcastDuration,
+                "<color=#4FA45B><b>CHAOS INSURGENCY AGENT</b></color>\n" +
+                "<color=#FFFFFF>Du bist als Wissenschaftler in die Foundation eingeschleust. " +
+                "Bewahre deine Tarnung und entscheide selbst, wann du dich zu erkennen gibst. " +
+                "Gelingt dir die Flucht, kehrst du zur Chaos Insurgency zurück.</color>");
+
+            Debug($"CI Agent assigned to {player.Nickname}.");
         }
 
         private static void AssignHausmeister()
@@ -107,6 +133,16 @@ namespace FacilityJobs.Managers
 
                 Debug($"Hausmeister assigned to {player.Nickname} in {room.Type}.");
             }
+        }
+
+        private static List<Player> GetUnassignedScientists()
+        {
+            return Player.List
+                .Where(player => player != null &&
+                                 player.IsConnected &&
+                                 player.Role.Type == RoleTypeId.Scientist &&
+                                 string.IsNullOrEmpty(player.CustomInfo))
+                .ToList();
         }
 
         private static Room GetRandomRoom(ZoneType zone)
