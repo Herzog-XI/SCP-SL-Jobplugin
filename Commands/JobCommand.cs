@@ -4,6 +4,7 @@ using CommandSystem;
 using Exiled.API.Features;
 using Exiled.CustomRoles.API.Features;
 using Exiled.Permissions.Extensions;
+using FacilityJobs.Managers;
 using FacilityJobs.Roles;
 
 namespace FacilityJobs.Commands
@@ -56,7 +57,7 @@ namespace FacilityJobs.Commands
     {
         public string Command { get; } = "set";
         public string[] Aliases { get; } = { "give" };
-        public string Description { get; } = "Sets a FacilityJobs role without respawning if the base role already matches.";
+        public string Description { get; } = "Sets a FacilityJobs role with its correct spawn, inventory and class text.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -86,7 +87,12 @@ namespace FacilityJobs.Commands
                 return false;
             }
 
-            role.AddRole(player);
+            if (!JobAssignmentManager.Assign(player, role, out string error))
+            {
+                response = $"Could not set {role.Name}: {error}";
+                return false;
+            }
+
             response = $"{role.Name} set for {player.Nickname}.";
             return true;
         }
