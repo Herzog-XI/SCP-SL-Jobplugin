@@ -80,7 +80,6 @@ namespace FacilityJobs.Managers
             Player player = TakeRandom(scientists);
             player.ClearInventory();
             player.AddItem(ItemType.KeycardScientist);
-            player.CustomInfo = "Wissenschaftler";
             RoundState.CiAgentUserId = player.UserId;
 
             player.Broadcast(
