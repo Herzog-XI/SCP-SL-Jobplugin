@@ -1,0 +1,43 @@
+name: Build FacilityJobs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build EXILED plugin
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore packages
+        run: nuget restore SCP-SL-Jobplugin.csproj
+
+      - name: Build Release
+        run: msbuild SCP-SL-Jobplugin.csproj /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Upload plugin DLL
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FacilityJobs
+          path: bin/x64/Release/FacilityJobs.dll
+          if-no-files-found: error
+          retention-days: 14
