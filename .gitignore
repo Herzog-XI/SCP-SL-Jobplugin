@@ -5,3 +5,8 @@ obj/
 *.suo
 *.dll
 *.pdb
+
+# Allow required SCP:SL references inside lib/
+!lib/
+!lib/*.dll
+!lib/README.md
