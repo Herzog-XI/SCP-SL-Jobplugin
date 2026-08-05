@@ -27,6 +27,26 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Install SteamCMD
+        shell: powershell
+        run: choco install steamcmd -y --no-progress
+
+      - name: Download SCP SL Dedicated Server references
+        shell: powershell
+        run: |
+          $serverPath = Join-Path $env:GITHUB_WORKSPACE "server"
+          New-Item -ItemType Directory -Force -Path $serverPath | Out-Null
+          steamcmd +force_install_dir "$serverPath" +login anonymous +app_update 996560 validate +quit
+
+          $managedPath = Join-Path $serverPath "SCPSL_Data\Managed"
+          $libPath = Join-Path $env:GITHUB_WORKSPACE "lib"
+          New-Item -ItemType Directory -Force -Path $libPath | Out-Null
+
+          Copy-Item (Join-Path $managedPath "UnityEngine.CoreModule.dll") $libPath -Force
+          Copy-Item (Join-Path $managedPath "Assembly-CSharp-firstpass.dll") $libPath -Force
+
+          Write-Host "Managed references copied to $libPath"
+
       - name: Restore packages
         run: nuget restore SCP-SL-Jobplugin.csproj
 
