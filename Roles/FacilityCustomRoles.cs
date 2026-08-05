@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Exiled.API.Enums;
+using Exiled.API.Features;
 using Exiled.API.Features.Attributes;
 using Exiled.CustomRoles.API.Features;
 using PlayerRoles;
@@ -17,6 +18,31 @@ namespace FacilityJobs.Roles
         public override float SpawnChance { get; set; } = 0f;
         public override string ConsoleMessage { get; set; } = string.Empty;
         public override bool DisplayCustomItemMessages { get; set; } = false;
+
+        // EXILED's default AddRole forces Role.Set even when the player already has the
+        // correct vanilla role. That causes the visible D-Class -> D-Class / Scientist ->
+        // Scientist respawn. Temporarily setting Role=None skips only that redundant role
+        // change while keeping EXILED's normal custom-role setup, inventory and description.
+        public override void AddRole(Player player)
+        {
+            if (player != null && Role != RoleTypeId.None && player.Role.Type == Role)
+            {
+                RoleTypeId baseRole = Role;
+                try
+                {
+                    Role = RoleTypeId.None;
+                    base.AddRole(player);
+                }
+                finally
+                {
+                    Role = baseRole;
+                }
+
+                return;
+            }
+
+            base.AddRole(player);
+        }
     }
 
     [CustomRole(RoleTypeId.Scientist)]
