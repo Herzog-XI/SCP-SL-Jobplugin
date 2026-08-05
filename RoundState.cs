@@ -14,6 +14,15 @@ namespace FacilityJobs
         public static bool SerpentsHandSelected { get; private set; }
         public static bool SerpentsHandSpawned { get; set; }
         public static int RespawnWaveCount { get; set; }
+        public static string CiAgentUserId { get; set; }
+
+        public static bool IsCiAgent(Player player)
+        {
+            return player != null &&
+                   player.IsConnected &&
+                   !string.IsNullOrEmpty(CiAgentUserId) &&
+                   string.Equals(player.UserId, CiAgentUserId, StringComparison.Ordinal);
+        }
 
         public static void Initialize()
         {
@@ -25,6 +34,7 @@ namespace FacilityJobs
             SerpentsHandSelected = Roll(config.SerpentsHandChance);
             SerpentsHandSpawned = false;
             RespawnWaveCount = 0;
+            CiAgentUserId = null;
 
             if (config.Debug)
             {
@@ -42,6 +52,7 @@ namespace FacilityJobs
             SerpentsHandSelected = false;
             SerpentsHandSpawned = false;
             RespawnWaveCount = 0;
+            CiAgentUserId = null;
         }
 
         private static bool Roll(int chance)
