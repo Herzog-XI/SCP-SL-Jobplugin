@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Exiled.API.Features;
+using Exiled.CustomRoles.API;
 using Exiled.CustomRoles.API.Features;
 
 namespace FacilityJobs.Roles
@@ -20,15 +22,18 @@ namespace FacilityJobs.Roles
         public static void Register()
         {
             registeredRoles.Clear();
-            registeredRoles.AddRange(CustomRole.RegisterRoles(skipReflection: true));
+            registeredRoles.AddRange(CustomRole.RegisterRoles(
+                skipReflection: true,
+                overrideClass: null,
+                inheritAttributes: true,
+                assembly: Assembly.GetExecutingAssembly()));
+
             Log.Info($"[FacilityJobs] Registered {registeredRoles.Count} custom roles.");
         }
 
         public static void Unregister()
         {
-            foreach (CustomRole role in registeredRoles.ToArray())
-                role.TryUnregister();
-
+            registeredRoles.Unregister();
             registeredRoles.Clear();
         }
 
