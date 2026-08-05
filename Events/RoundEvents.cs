@@ -1,5 +1,6 @@
 using Exiled.API.Features;
 using FacilityJobs.Managers;
+using FacilityJobs.SerpentsHand;
 using MEC;
 using Server = Exiled.Events.Handlers.Server;
 
@@ -22,18 +23,20 @@ namespace FacilityJobs.Events
             Server.RoundStarted -= OnRoundStarted;
             Server.RestartingRound -= OnRestartingRound;
 
-            CancelAssignment();
+            CancelRoundWork();
         }
 
         private void OnWaitingForPlayers()
         {
-            CancelAssignment();
+            CancelRoundWork();
+            SerpentsHandManager.Reset();
             RoundState.Reset();
         }
 
         private void OnRoundStarted()
         {
             RoundState.Initialize();
+            SerpentsHandManager.Reset();
 
             if (Plugin.Instance.Config.Debug)
                 Log.Debug($"[FacilityJobs] Round initialized. Starting SCPs: {RoundState.StartingScpCount}.");
@@ -44,8 +47,15 @@ namespace FacilityJobs.Events
 
         private void OnRestartingRound()
         {
-            CancelAssignment();
+            CancelRoundWork();
+            SerpentsHandManager.Reset();
             RoundState.Reset();
+        }
+
+        private void CancelRoundWork()
+        {
+            CancelAssignment();
+            Plugin.Instance?.SerpentsHandSpawnManager?.Cancel();
         }
 
         private void CancelAssignment()
