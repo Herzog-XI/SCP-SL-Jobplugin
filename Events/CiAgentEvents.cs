@@ -1,5 +1,6 @@
 using Exiled.API.Features;
 using Exiled.Events.EventArgs.Player;
+using FacilityJobs.Roles;
 using PlayerRoles;
 using Player = Exiled.Events.Handlers.Player;
 
@@ -9,41 +10,27 @@ namespace FacilityJobs.Events
     {
         public void Register()
         {
-            Player.Hurting += OnHurting;
             Player.Escaping += OnEscaping;
             Player.Left += OnLeft;
         }
 
         public void Unregister()
         {
-            Player.Hurting -= OnHurting;
             Player.Escaping -= OnEscaping;
             Player.Left -= OnLeft;
         }
 
-        private static void OnHurting(HurtingEventArgs ev)
+        private static bool IsCiAgent(Exiled.API.Features.Player player)
         {
-            if (ev == null || ev.Player == null || ev.Attacker == null)
-                return;
-
-            bool victimIsAgent = RoundState.IsCiAgent(ev.Player);
-            bool attackerIsAgent = RoundState.IsCiAgent(ev.Attacker);
-
-            if (!victimIsAgent && !attackerIsAgent)
-                return;
-
-            bool victimIsChaos = ev.Player.Role.Team == Team.ChaosInsurgency;
-            bool attackerIsChaos = ev.Attacker.Role.Team == Team.ChaosInsurgency;
-
-            if ((victimIsAgent && attackerIsChaos) || (attackerIsAgent && victimIsChaos))
-                ev.IsAllowed = false;
+            return player != null && RoleRegistry.CiAgent != null && RoleRegistry.CiAgent.Check(player);
         }
 
         private static void OnEscaping(EscapingEventArgs ev)
         {
-            if (ev == null || !RoundState.IsCiAgent(ev.Player))
+            if (ev == null || !IsCiAgent(ev.Player))
                 return;
 
+            RoleRegistry.CiAgent.RemoveRole(ev.Player);
             ev.NewRole = RoleTypeId.ChaosConscript;
             ev.Player.CustomInfo = string.Empty;
             RoundState.CiAgentUserId = null;
@@ -54,7 +41,7 @@ namespace FacilityJobs.Events
 
         private static void OnLeft(LeftEventArgs ev)
         {
-            if (ev?.Player == null || !RoundState.IsCiAgent(ev.Player))
+            if (ev?.Player == null || !IsCiAgent(ev.Player))
                 return;
 
             RoundState.CiAgentUserId = null;
