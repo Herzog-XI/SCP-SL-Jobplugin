@@ -84,7 +84,7 @@ namespace FacilityJobs.Roles
             "<color=#A8DDB0>• Bewahre deine Tarnung.\n" +
             "• Unterstütze die Chaos Insurgency, ohne dich früh zu verraten.\n" +
             "• Entkomme und kehre als Chaos-Soldat zurück.</color>";
-        public override string CustomInfo { get; set; } = "Wissenschaftler";
+        public override string CustomInfo { get; set; } = "<color=#FFFF7C>Wissenschaftler</color>";
         public override RoleTypeId Role { get; set; } = RoleTypeId.Scientist;
         public override List<string> Inventory { get; set; } = new List<string> { "KeycardScientist" };
     }
