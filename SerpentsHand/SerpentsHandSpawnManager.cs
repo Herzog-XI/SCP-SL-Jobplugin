@@ -12,8 +12,6 @@ namespace FacilityJobs.SerpentsHand
 {
     internal sealed class SerpentsHandSpawnManager
     {
-        // Tested local room coordinates. Local coordinates remain valid even when the
-        // procedural facility rotates or moves the room in another map seed.
         private static readonly Vector3 CollapsedTunnelLocalSpawn = new Vector3(0.005f, 0.96f, 4.961f);
         private static readonly Vector3 ShelterLocalSpawn = new Vector3(-0.406f, 0.96f, 4.969f);
 
@@ -69,10 +67,6 @@ namespace FacilityJobs.SerpentsHand
                 Player player = spectators[index];
                 SerpentsHandRole shRole = roles[index];
                 Exiled.CustomRoles.API.Features.CustomRole customRole = GetCustomRole(shRole);
-
-                // Formation offsets are local to the room. One member stands exactly on the
-                // tested point, two stand closely to the left and right, and a possible fourth
-                // member stands slightly behind the centre without leaving the safe area.
                 Vector3 localPosition = localBasePosition + GetFormationOffset(index);
                 Vector3 worldPosition = spawnRoom.WorldPosition(localPosition);
 
@@ -87,7 +81,7 @@ namespace FacilityJobs.SerpentsHand
                     player.Position = worldPosition;
                     if (customRole != null)
                     {
-                        player.CustomInfo = customRole.CustomInfo ?? string.Empty;
+                        JobAssignmentManager.ApplyVisibleJobTag(player, customRole);
                         JobAssignmentManager.ScheduleRoleText(player, customRole);
                     }
                 });
@@ -133,28 +127,26 @@ namespace FacilityJobs.SerpentsHand
 
         private static bool TryFindSpawn(out Room room, out Vector3 localPosition)
         {
-            List<Room> collapsedRooms = Room.List
-                .Where(r => r != null && IsCollapsedTunnel(r))
+            List<Room> candidates = Room.List
+                .Where(r => r != null && (IsCollapsedTunnel(r) || IsShelter(r) || IsLoadingBay(r)))
                 .ToList();
 
-            List<Room> shelterRooms = Room.List
-                .Where(r => r != null && IsShelter(r))
-                .ToList();
-
-            bool chooseCollapsed = UnityEngine.Random.Range(0, 2) == 0;
-            List<Room> preferred = chooseCollapsed ? collapsedRooms : shelterRooms;
-            List<Room> fallback = chooseCollapsed ? shelterRooms : collapsedRooms;
-
-            List<Room> selectedPool = preferred.Count > 0 ? preferred : fallback;
-            if (selectedPool.Count == 0)
+            if (candidates.Count == 0)
             {
                 room = null;
                 localPosition = Vector3.zero;
                 return false;
             }
 
-            room = selectedPool[UnityEngine.Random.Range(0, selectedPool.Count)];
-            localPosition = IsCollapsedTunnel(room) ? CollapsedTunnelLocalSpawn : ShelterLocalSpawn;
+            room = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+
+            if (IsCollapsedTunnel(room))
+                localPosition = CollapsedTunnelLocalSpawn;
+            else if (IsShelter(room))
+                localPosition = ShelterLocalSpawn;
+            else
+                localPosition = Vector3.up * 1.2f;
+
             return true;
         }
 
@@ -172,6 +164,14 @@ namespace FacilityJobs.SerpentsHand
             string name = room.Name ?? string.Empty;
             return type.IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0 ||
                    name.IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsLoadingBay(Room room)
+        {
+            string type = room.Type.ToString();
+            string name = room.Name ?? string.Empty;
+            return type.IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static Vector3 GetFormationOffset(int index)
