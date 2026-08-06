@@ -60,6 +60,12 @@ namespace FacilityJobs.SerpentsHand
             if (!TryFindSpawn(out Room spawnRoom, out Vector3 localBasePosition))
                 return;
 
+            bool isCollapsedTunnel = IsCollapsedTunnel(spawnRoom);
+            Quaternion collapsedTunnelDoorRotation = Quaternion.Euler(
+                0f,
+                spawnRoom.Rotation.eulerAngles.y + 180f,
+                0f);
+
             List<SerpentsHandRole> roles = BuildRoleList(actualSize);
 
             for (int index = 0; index < actualSize; index++)
@@ -79,6 +85,13 @@ namespace FacilityJobs.SerpentsHand
                         return;
 
                     player.Position = worldPosition;
+
+                    // In the collapsed tunnel the room's default forward direction points
+                    // deeper into the tunnel. Rotate the whole group by 180 degrees so every
+                    // member starts facing the exit door instead.
+                    if (isCollapsedTunnel)
+                        player.Rotation = collapsedTunnelDoorRotation;
+
                     if (customRole != null)
                     {
                         JobAssignmentManager.ApplyVisibleJobTag(player, customRole);
