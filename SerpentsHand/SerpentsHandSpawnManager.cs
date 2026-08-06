@@ -15,7 +15,7 @@ namespace FacilityJobs.SerpentsHand
         // Tested local room coordinates. Local coordinates remain valid even when the
         // procedural facility rotates or moves the room in another map seed.
         private static readonly Vector3 CollapsedTunnelLocalSpawn = new Vector3(0.005f, 0.96f, 4.961f);
-        private static readonly Vector3 ShelterLocalSpawn = new Vector3(-1.355f, 0.96f, 5.121f);
+        private static readonly Vector3 ShelterLocalSpawn = new Vector3(-0.406f, 0.96f, 4.969f);
 
         private CoroutineHandle pendingSpawn;
         public bool HasPendingSpawn => pendingSpawn.IsRunning;
@@ -70,8 +70,9 @@ namespace FacilityJobs.SerpentsHand
                 SerpentsHandRole shRole = roles[index];
                 Exiled.CustomRoles.API.Features.CustomRole customRole = GetCustomRole(shRole);
 
-                // Formation offsets are also local to the room, so the group remains in the
-                // same safe formation regardless of the room's world rotation.
+                // Formation offsets are local to the room. One member stands exactly on the
+                // tested point, two stand closely to the left and right, and a possible fourth
+                // member stands slightly behind the centre without leaving the safe area.
                 Vector3 localPosition = localBasePosition + GetFormationOffset(index);
                 Vector3 worldPosition = spawnRoom.WorldPosition(localPosition);
 
@@ -177,10 +178,9 @@ namespace FacilityJobs.SerpentsHand
         {
             switch (index)
             {
-                // Compact formation to keep every member inside the tested walkable area.
-                case 1: return new Vector3(0.65f, 0f, 0f);
-                case 2: return new Vector3(-0.65f, 0f, 0f);
-                case 3: return new Vector3(0f, 0f, -0.65f);
+                case 1: return new Vector3(0.55f, 0f, 0f);
+                case 2: return new Vector3(-0.55f, 0f, 0f);
+                case 3: return new Vector3(0f, 0f, -0.55f);
                 default: return Vector3.zero;
             }
         }
