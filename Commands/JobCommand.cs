@@ -6,6 +6,8 @@ using Exiled.CustomRoles.API.Features;
 using Exiled.Permissions.Extensions;
 using FacilityJobs.Managers;
 using FacilityJobs.Roles;
+using RemoteAdmin;
+using UnityEngine;
 
 namespace FacilityJobs.Commands
 {
@@ -22,11 +24,12 @@ namespace FacilityJobs.Commands
         {
             RegisterCommand(new JobListCommand());
             RegisterCommand(new JobSetCommand());
+            RegisterCommand(new JobCoordsCommand());
         }
 
         protected override bool ExecuteParent(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
-            response = "Usage: job list | job set <player> <job>";
+            response = "Usage: job list | job set <player> <job> | job coords";
             return false;
         }
     }
@@ -96,5 +99,53 @@ namespace FacilityJobs.Commands
             response = $"{role.Name} set for {player.Nickname}.";
             return true;
         }
+    }
+
+    internal sealed class JobCoordsCommand : ICommand
+    {
+        public string Command { get; } = "coords";
+        public string[] Aliases { get; } = { "position", "pos" };
+        public string Description { get; } = "Shows your world and room-local coordinates for spawn setup.";
+
+        public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
+        {
+            if (!sender.CheckPermission("customroles.give"))
+            {
+                response = "Permission denied (customroles.give).";
+                return false;
+            }
+
+            if (!(sender is PlayerCommandSender playerSender))
+            {
+                response = "This command must be executed from the in-game Remote Admin console.";
+                return false;
+            }
+
+            Player player = Player.Get(playerSender);
+            if (player == null || !player.IsConnected)
+            {
+                response = "Could not resolve your player.";
+                return false;
+            }
+
+            Room room = player.CurrentRoom ?? Room.Get(player.Position);
+            if (room == null)
+            {
+                response = $"No room detected. World: {Format(player.Position)}";
+                return false;
+            }
+
+            Vector3 local = room.LocalPosition(player.Position);
+            response =
+                $"Room: {room.Type} ({room.Name})\n" +
+                $"World: {Format(player.Position)}\n" +
+                $"Local: {Format(local)}\n" +
+                $"Room rotation Y: {room.Rotation.eulerAngles.y:0.###}\n" +
+                $"Player rotation Y: {player.Rotation.y:0.###}";
+            return true;
+        }
+
+        private static string Format(Vector3 position) =>
+            $"X={position.x:0.###}, Y={position.y:0.###}, Z={position.z:0.###}";
     }
 }
