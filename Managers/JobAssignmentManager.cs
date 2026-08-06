@@ -63,10 +63,31 @@ namespace FacilityJobs.Managers
                 return false;
             }
 
-            // Base-role validation guarantees that no vanilla role change is needed.
             role.AddRole(player);
             Timing.CallDelayed(0.1f, () => FinalizeAssignment(player, role, targetPosition));
             return true;
+        }
+
+        public static void ScheduleRoleText(Player player, CustomRole role)
+        {
+            if (player == null || role == null || string.IsNullOrWhiteSpace(role.Description))
+                return;
+
+            // The vanilla spawn screen and role-change UI can overwrite hints sent in the
+            // same frame. Sending after both short and longer delays makes the job text
+            // reliable without using a public broadcast.
+            Timing.CallDelayed(0.8f, () => ShowRoleText(player, role));
+            Timing.CallDelayed(2.0f, () => ShowRoleText(player, role));
+        }
+
+        private static void ShowRoleText(Player player, CustomRole role)
+        {
+            if (player == null || !player.IsConnected || role == null || !role.Check(player))
+                return;
+
+            string text = $"<size=30><b>{role.Name}</b></size>\n\n{role.Description}";
+            player.ShowHint(text, 12f);
+            Debug($"Displayed spawn text for {role.Name} to {player.Nickname}.");
         }
 
         private static bool HasRequiredBaseRole(Player player, CustomRole role, out string error)
@@ -109,9 +130,7 @@ namespace FacilityJobs.Managers
 
             player.Position = targetPosition;
             player.CustomInfo = role.CustomInfo ?? string.Empty;
-
-            if (!string.IsNullOrWhiteSpace(role.Description))
-                player.ShowHint(role.Description, 12f);
+            ScheduleRoleText(player, role);
 
             if (role is CiAgentRole)
                 RoundState.CiAgentUserId = player.UserId;
