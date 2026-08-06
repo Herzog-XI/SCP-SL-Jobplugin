@@ -73,11 +73,11 @@ namespace FacilityJobs.Managers
             if (player == null || role == null || string.IsNullOrWhiteSpace(role.Description))
                 return;
 
-            // The vanilla spawn screen and role-change UI can overwrite hints sent in the
-            // same frame. Sending after both short and longer delays makes the job text
-            // reliable without using a public broadcast.
-            Timing.CallDelayed(0.8f, () => ShowRoleText(player, role));
-            Timing.CallDelayed(2.0f, () => ShowRoleText(player, role));
+            // SCP:SL keeps the vanilla D-Class/Scientist/Tutorial spawn overlay active for
+            // several seconds. Earlier hints were being overwritten by that overlay. Wait
+            // until it has fully finished, then send one backup copy shortly afterwards.
+            Timing.CallDelayed(5.0f, () => ShowRoleText(player, role));
+            Timing.CallDelayed(6.0f, () => ShowRoleText(player, role));
         }
 
         private static void ShowRoleText(Player player, CustomRole role)
@@ -85,8 +85,7 @@ namespace FacilityJobs.Managers
             if (player == null || !player.IsConnected || role == null || !role.Check(player))
                 return;
 
-            string text = $"<size=30><b>{role.Name}</b></size>\n\n{role.Description}";
-            player.ShowHint(text, 12f);
+            player.ShowHint(role.Description, 12f);
             Debug($"Displayed spawn text for {role.Name} to {player.Nickname}.");
         }
 
