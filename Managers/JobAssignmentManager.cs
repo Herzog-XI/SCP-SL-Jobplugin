@@ -13,6 +13,7 @@ namespace FacilityJobs.Managers
 {
     internal static class JobAssignmentManager
     {
+        private const float RoleTextDuration = 8f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         public static void CaptureScientistSpawns()
@@ -73,20 +74,34 @@ namespace FacilityJobs.Managers
             if (player == null || role == null || string.IsNullOrWhiteSpace(role.Description))
                 return;
 
-            // SCP:SL keeps the vanilla D-Class/Scientist/Tutorial spawn overlay active for
-            // several seconds. Earlier hints were being overwritten by that overlay. Wait
-            // until it has fully finished, then send one backup copy shortly afterwards.
-            Timing.CallDelayed(5.0f, () => ShowRoleText(player, role));
-            Timing.CallDelayed(6.0f, () => ShowRoleText(player, role));
+            // Let the vanilla intro appear only briefly, clear/cover it, then immediately
+            // replace it with the personal FacilityJobs text for roughly the normal intro time.
+            Timing.CallDelayed(0.35f, () =>
+            {
+                if (!IsStillRole(player, role))
+                    return;
+
+                player.ShowHint(string.Empty, 0.1f);
+            });
+
+            Timing.CallDelayed(0.5f, () => ShowRoleText(player, role));
+
+            // One early backup handles clients whose vanilla intro finishes a fraction later.
+            Timing.CallDelayed(0.9f, () => ShowRoleText(player, role));
         }
 
         private static void ShowRoleText(Player player, CustomRole role)
         {
-            if (player == null || !player.IsConnected || role == null || !role.Check(player))
+            if (!IsStillRole(player, role))
                 return;
 
-            player.ShowHint(role.Description, 12f);
+            player.ShowHint(role.Description, RoleTextDuration);
             Debug($"Displayed spawn text for {role.Name} to {player.Nickname}.");
+        }
+
+        private static bool IsStillRole(Player player, CustomRole role)
+        {
+            return player != null && player.IsConnected && role != null && role.Check(player);
         }
 
         private static bool HasRequiredBaseRole(Player player, CustomRole role, out string error)
@@ -124,17 +139,44 @@ namespace FacilityJobs.Managers
 
         private static void FinalizeAssignment(Player player, CustomRole role, Vector3 targetPosition)
         {
-            if (player == null || !player.IsConnected || role == null || !role.Check(player))
+            if (!IsStillRole(player, role))
                 return;
 
             player.Position = targetPosition;
-            player.CustomInfo = role.CustomInfo ?? string.Empty;
+            ApplyVisibleJobTag(player, role);
             ScheduleRoleText(player, role);
 
             if (role is CiAgentRole)
                 RoundState.CiAgentUserId = player.UserId;
 
             Debug($"Finalized {role.Name} for {player.Nickname} at {targetPosition}.");
+        }
+
+        public static void ApplyVisibleJobTag(Player player, CustomRole role)
+        {
+            if (player == null || !player.IsConnected || role == null)
+                return;
+
+            player.CustomInfo = role.CustomInfo ?? string.Empty;
+            player.InfoArea |= PlayerInfoArea.CustomInfo;
+
+            // The CI disguise was the only tag not reliably visible. Reapply it after the
+            // role UI has settled so every observing client receives the Scientist cover tag.
+            if (role is CiAgentRole)
+            {
+                Timing.CallDelayed(0.6f, () => ReapplyCiTag(player, role));
+                Timing.CallDelayed(1.5f, () => ReapplyCiTag(player, role));
+            }
+        }
+
+        private static void ReapplyCiTag(Player player, CustomRole role)
+        {
+            if (!IsStillRole(player, role))
+                return;
+
+            player.CustomInfo = role.CustomInfo ?? "<color=#FFFF7C>Wissenschaftler</color>";
+            player.InfoArea |= PlayerInfoArea.CustomInfo;
+            Debug($"Reapplied CI disguise tag for {player.Nickname}.");
         }
 
         private static bool TryGetSpawnPosition(CustomRole role, out Vector3 position)
@@ -210,7 +252,8 @@ namespace FacilityJobs.Managers
             List<Room> rooms = Room.List
                 .Where(room => room != null &&
                     (room.Type.ToString().IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     room.Type.ToString().IndexOf("Collapsed", StringComparison.OrdinalIgnoreCase) >= 0))
+                     room.Type.ToString().IndexOf("Collapsed", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     room.Type.ToString().IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0))
                 .ToList();
 
             if (rooms.Count > 0)
