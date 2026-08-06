@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Exiled.API.Features;
+using FacilityJobs.Managers;
 using FacilityJobs.Roles;
 using MEC;
 using PlayerRoles;
@@ -11,6 +12,11 @@ namespace FacilityJobs.SerpentsHand
 {
     internal sealed class SerpentsHandSpawnManager
     {
+        // Tested local room coordinates. Local coordinates remain valid even when the
+        // procedural facility rotates or moves the room in another map seed.
+        private static readonly Vector3 CollapsedTunnelLocalSpawn = new Vector3(0.005f, 0.96f, 4.961f);
+        private static readonly Vector3 ShelterLocalSpawn = new Vector3(-1.355f, 0.96f, 5.121f);
+
         private CoroutineHandle pendingSpawn;
         public bool HasPendingSpawn => pendingSpawn.IsRunning;
 
@@ -53,31 +59,41 @@ namespace FacilityJobs.SerpentsHand
             if (actualSize <= 0)
                 return;
 
-            Room spawnRoom = FindSpawnRoom();
-            if (spawnRoom == null)
+            if (!TryFindSpawn(out Room spawnRoom, out Vector3 localBasePosition))
                 return;
 
             List<SerpentsHandRole> roles = BuildRoleList(actualSize);
-            Vector3 basePosition = spawnRoom.Position + (Vector3.up * 1.2f);
 
             for (int index = 0; index < actualSize; index++)
             {
                 Player player = spectators[index];
-                SerpentsHandRole role = roles[index];
-                Vector3 position = basePosition + GetFormationOffset(index);
+                SerpentsHandRole shRole = roles[index];
+                Exiled.CustomRoles.API.Features.CustomRole customRole = GetCustomRole(shRole);
 
-                GetCustomRole(role)?.AddRole(player);
-                SerpentsHandManager.Register(player, role);
+                // Formation offsets are also local to the room, so the group remains in the
+                // same safe formation regardless of the room's world rotation.
+                Vector3 localPosition = localBasePosition + GetFormationOffset(index);
+                Vector3 worldPosition = spawnRoom.WorldPosition(localPosition);
+
+                customRole?.AddRole(player);
+                SerpentsHandManager.Register(player, shRole);
 
                 Timing.CallDelayed(0.35f, () =>
                 {
-                    if (player != null && player.IsConnected && SerpentsHandManager.IsMember(player))
-                        player.Position = position;
+                    if (player == null || !player.IsConnected || !SerpentsHandManager.IsMember(player))
+                        return;
+
+                    player.Position = worldPosition;
+                    if (customRole != null)
+                    {
+                        player.CustomInfo = customRole.CustomInfo ?? string.Empty;
+                        JobAssignmentManager.ScheduleRoleText(player, customRole);
+                    }
                 });
             }
 
             RoundState.SerpentsHandSpawned = true;
-            Debug($"Serpent's Hand spawned {actualSize}/{requestedSize} players in {spawnRoom.Type}: {string.Join(", ", roles)}.");
+            Debug($"Serpent's Hand spawned {actualSize}/{requestedSize} players in {spawnRoom.Type} at local {localBasePosition}: {string.Join(", ", roles)}.");
         }
 
         private static Exiled.CustomRoles.API.Features.CustomRole GetCustomRole(SerpentsHandRole role)
@@ -97,39 +113,74 @@ namespace FacilityJobs.SerpentsHand
         private static List<SerpentsHandRole> BuildRoleList(int count)
         {
             List<SerpentsHandRole> result = new List<SerpentsHandRole> { SerpentsHandRole.Warden };
-            List<SerpentsHandRole> remaining = new List<SerpentsHandRole> { SerpentsHandRole.Wraith, SerpentsHandRole.Seeker, SerpentsHandRole.Infiltrator };
+            List<SerpentsHandRole> remaining = new List<SerpentsHandRole>
+            {
+                SerpentsHandRole.Wraith,
+                SerpentsHandRole.Seeker,
+                SerpentsHandRole.Infiltrator,
+            };
+
             while (result.Count < count && remaining.Count > 0)
             {
                 int index = UnityEngine.Random.Range(0, remaining.Count);
                 result.Add(remaining[index]);
                 remaining.RemoveAt(index);
             }
+
             return result;
         }
 
-        private static Room FindSpawnRoom()
+        private static bool TryFindSpawn(out Room room, out Vector3 localPosition)
         {
-            List<Room> candidates = Room.List.Where(room => room != null && IsConfiguredSpawnRoom(room.Type.ToString())).ToList();
-            if (candidates.Count == 0)
-                return null;
+            List<Room> collapsedRooms = Room.List
+                .Where(r => r != null && IsCollapsedTunnel(r))
+                .ToList();
 
-            List<Room> loadingDock = candidates.Where(room => room.Type.ToString().IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-            List<Room> collapsed = candidates.Where(room => room.Type.ToString().IndexOf("Collapsed", StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-            bool chooseLoadingDock = UnityEngine.Random.Range(0, 2) == 0;
-            List<Room> preferred = chooseLoadingDock ? loadingDock : collapsed;
-            List<Room> fallback = chooseLoadingDock ? collapsed : loadingDock;
-            return preferred.Count > 0 ? preferred[UnityEngine.Random.Range(0, preferred.Count)] : fallback.Count > 0 ? fallback[UnityEngine.Random.Range(0, fallback.Count)] : null;
+            List<Room> shelterRooms = Room.List
+                .Where(r => r != null && IsShelter(r))
+                .ToList();
+
+            bool chooseCollapsed = UnityEngine.Random.Range(0, 2) == 0;
+            List<Room> preferred = chooseCollapsed ? collapsedRooms : shelterRooms;
+            List<Room> fallback = chooseCollapsed ? shelterRooms : collapsedRooms;
+
+            List<Room> selectedPool = preferred.Count > 0 ? preferred : fallback;
+            if (selectedPool.Count == 0)
+            {
+                room = null;
+                localPosition = Vector3.zero;
+                return false;
+            }
+
+            room = selectedPool[UnityEngine.Random.Range(0, selectedPool.Count)];
+            localPosition = IsCollapsedTunnel(room) ? CollapsedTunnelLocalSpawn : ShelterLocalSpawn;
+            return true;
         }
 
-        private static bool IsConfiguredSpawnRoom(string name) => name.IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Collapsed", StringComparison.OrdinalIgnoreCase) >= 0;
+        private static bool IsCollapsedTunnel(Room room)
+        {
+            string type = room.Type.ToString();
+            string name = room.Name ?? string.Empty;
+            return type.IndexOf("CollapsedTunnel", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("CollapsedTunnel", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsShelter(Room room)
+        {
+            string type = room.Type.ToString();
+            string name = room.Name ?? string.Empty;
+            return type.IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
 
         private static Vector3 GetFormationOffset(int index)
         {
             switch (index)
             {
-                case 1: return new Vector3(1.25f, 0f, 0f);
-                case 2: return new Vector3(-1.25f, 0f, 0f);
-                case 3: return new Vector3(0f, 0f, 1.25f);
+                // Compact formation to keep every member inside the tested walkable area.
+                case 1: return new Vector3(0.65f, 0f, 0f);
+                case 2: return new Vector3(-0.65f, 0f, 0f);
+                case 3: return new Vector3(0f, 0f, -0.65f);
                 default: return Vector3.zero;
             }
         }
