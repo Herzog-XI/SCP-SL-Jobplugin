@@ -13,7 +13,7 @@ namespace FacilityJobs.Managers
 {
     internal static class JobAssignmentManager
     {
-        private const float RoleTextDuration = 8f;
+        private const float IntroDuration = 7f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         public static void CaptureScientistSpawns()
@@ -69,41 +69,6 @@ namespace FacilityJobs.Managers
             return true;
         }
 
-        public static void ScheduleRoleText(Player player, CustomRole role)
-        {
-            if (player == null || role == null || string.IsNullOrWhiteSpace(role.Description))
-                return;
-
-            // Let the vanilla intro appear only briefly, clear/cover it, then immediately
-            // replace it with the personal FacilityJobs text for roughly the normal intro time.
-            Timing.CallDelayed(0.35f, () =>
-            {
-                if (!IsStillRole(player, role))
-                    return;
-
-                player.ShowHint(string.Empty, 0.1f);
-            });
-
-            Timing.CallDelayed(0.5f, () => ShowRoleText(player, role));
-
-            // One early backup handles clients whose vanilla intro finishes a fraction later.
-            Timing.CallDelayed(0.9f, () => ShowRoleText(player, role));
-        }
-
-        private static void ShowRoleText(Player player, CustomRole role)
-        {
-            if (!IsStillRole(player, role))
-                return;
-
-            player.ShowHint(role.Description, RoleTextDuration);
-            Debug($"Displayed spawn text for {role.Name} to {player.Nickname}.");
-        }
-
-        private static bool IsStillRole(Player player, CustomRole role)
-        {
-            return player != null && player.IsConnected && role != null && role.Check(player);
-        }
-
         private static bool HasRequiredBaseRole(Player player, CustomRole role, out string error)
         {
             error = null;
@@ -139,12 +104,12 @@ namespace FacilityJobs.Managers
 
         private static void FinalizeAssignment(Player player, CustomRole role, Vector3 targetPosition)
         {
-            if (!IsStillRole(player, role))
+            if (player == null || !player.IsConnected || role == null || !role.Check(player))
                 return;
 
             player.Position = targetPosition;
             ApplyVisibleJobTag(player, role);
-            ScheduleRoleText(player, role);
+            ShowIntro(player, role);
 
             if (role is CiAgentRole)
                 RoundState.CiAgentUserId = player.UserId;
@@ -160,8 +125,6 @@ namespace FacilityJobs.Managers
             player.CustomInfo = role.CustomInfo ?? string.Empty;
             player.InfoArea |= PlayerInfoArea.CustomInfo;
 
-            // The CI disguise was the only tag not reliably visible. Reapply it after the
-            // role UI has settled so every observing client receives the Scientist cover tag.
             if (role is CiAgentRole)
             {
                 Timing.CallDelayed(0.6f, () => ReapplyCiTag(player, role));
@@ -174,9 +137,36 @@ namespace FacilityJobs.Managers
             if (!IsStillRole(player, role))
                 return;
 
-            player.CustomInfo = role.CustomInfo ?? "<color=#FFFF7C>Wissenschaftler</color>";
+            player.CustomInfo = role.CustomInfo ?? "Wissenschaftler";
             player.InfoArea |= PlayerInfoArea.CustomInfo;
             Debug($"Reapplied CI disguise tag for {player.Nickname}.");
+        }
+
+        private static void ShowIntro(Player player, CustomRole role)
+        {
+            if (player == null || !player.IsConnected || role == null)
+                return;
+
+            string intro = role is FacilityCustomRole facilityRole
+                ? facilityRole.BuildIntroText()
+                : role.Description;
+
+            if (string.IsNullOrWhiteSpace(intro))
+                return;
+
+            Timing.CallDelayed(0.05f, () =>
+            {
+                if (!IsStillRole(player, role))
+                    return;
+
+                player.ShowHint(intro, IntroDuration);
+                Debug($"Displayed intro for {role.Name} to {player.Nickname}.");
+            });
+        }
+
+        private static bool IsStillRole(Player player, CustomRole role)
+        {
+            return player != null && player.IsConnected && role != null && role.Check(player);
         }
 
         private static bool TryGetSpawnPosition(CustomRole role, out Vector3 position)
