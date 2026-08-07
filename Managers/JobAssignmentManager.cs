@@ -5,6 +5,7 @@ using Exiled.API.Enums;
 using Exiled.API.Features;
 using Exiled.CustomRoles.API.Features;
 using FacilityJobs.Roles;
+using HintServiceMeow.UI.Utilities;
 using MEC;
 using PlayerRoles;
 using UnityEngine;
@@ -13,7 +14,10 @@ namespace FacilityJobs.Managers
 {
     internal static class JobAssignmentManager
     {
-        private const float IntroDuration = 7f;
+        private const float HausmeisterIntroDuration = 7f;
+        private const float ZoneManagerIntroDuration = 7f;
+        private const float CiAgentIntroDuration = 10f;
+        private const float SerpentsHandIntroDuration = 10f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         public static void CaptureScientistSpawns()
@@ -150,20 +154,33 @@ namespace FacilityJobs.Managers
             if (player == null || !player.IsConnected || role == null)
                 return;
 
-            string intro = role is FacilityCustomRole facilityRole
-                ? facilityRole.BuildIntroText()
-                : role.Description;
-
-            if (string.IsNullOrWhiteSpace(intro))
+            if (role is not FacilityCustomRole facilityRole)
                 return;
+
+            string title = $"Du bist ein {facilityRole.IntroTitle}.";
+            string[] body = facilityRole.IntroBody
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToArray();
+
+            float duration = role is CiAgentRole ? CiAgentIntroDuration : role is SerpentsHandCustomRole ? SerpentsHandIntroDuration : role is ZoneManagerRole ? ZoneManagerIntroDuration : HausmeisterIntroDuration;
 
             Timing.CallDelayed(0.05f, () =>
             {
                 if (!IsStillRole(player, role))
                     return;
 
-                player.ShowHint(intro, IntroDuration);
-                Debug($"Displayed intro for {role.Name} to {player.Nickname}.");
+                try
+                {
+                    var commonHint = new CommonHint(player.ReferenceHub);
+                    commonHint.ShowRoleHint(title, body, duration);
+                    Debug($"Displayed intro for {role.Name} to {player.Nickname}.");
+                }
+                catch (Exception exception)
+                {
+                    Log.Error($"[FacilityJobs] Failed to show HintServiceMeow role hint for {role.Name}: {exception}");
+                }
             });
         }
 
