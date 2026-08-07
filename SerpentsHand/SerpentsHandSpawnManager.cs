@@ -12,6 +12,8 @@ namespace FacilityJobs.SerpentsHand
 {
     internal sealed class SerpentsHandSpawnManager
     {
+        // Tested local room coordinates. Local coordinates remain valid even when the
+        // procedural facility rotates or moves the room in another map seed.
         private static readonly Vector3 CollapsedTunnelLocalSpawn = new Vector3(0.005f, 0.96f, 4.961f);
         private static readonly Vector3 ShelterLocalSpawn = new Vector3(-0.406f, 0.96f, 4.969f);
 
@@ -60,12 +62,6 @@ namespace FacilityJobs.SerpentsHand
             if (!TryFindSpawn(out Room spawnRoom, out Vector3 localBasePosition))
                 return;
 
-            bool isCollapsedTunnel = IsCollapsedTunnel(spawnRoom);
-            Quaternion collapsedTunnelDoorRotation = Quaternion.Euler(
-                0f,
-                spawnRoom.Rotation.eulerAngles.y + 180f,
-                0f);
-
             List<SerpentsHandRole> roles = BuildRoleList(actualSize);
 
             for (int index = 0; index < actualSize; index++)
@@ -85,17 +81,9 @@ namespace FacilityJobs.SerpentsHand
                         return;
 
                     player.Position = worldPosition;
-
-                    // In the collapsed tunnel the room's default forward direction points
-                    // deeper into the tunnel. Rotate the whole group by 180 degrees so every
-                    // member starts facing the exit door instead.
-                    if (isCollapsedTunnel)
-                        player.Rotation = collapsedTunnelDoorRotation;
-
                     if (customRole != null)
                     {
                         JobAssignmentManager.ApplyVisibleJobTag(player, customRole);
-                        JobAssignmentManager.ScheduleRoleText(player, customRole);
                     }
                 });
             }
@@ -140,26 +128,28 @@ namespace FacilityJobs.SerpentsHand
 
         private static bool TryFindSpawn(out Room room, out Vector3 localPosition)
         {
-            List<Room> candidates = Room.List
-                .Where(r => r != null && (IsCollapsedTunnel(r) || IsShelter(r) || IsLoadingBay(r)))
+            List<Room> collapsedRooms = Room.List
+                .Where(r => r != null && IsCollapsedTunnel(r))
                 .ToList();
 
-            if (candidates.Count == 0)
+            List<Room> shelterRooms = Room.List
+                .Where(r => r != null && IsShelter(r))
+                .ToList();
+
+            bool chooseCollapsed = UnityEngine.Random.Range(0, 2) == 0;
+            List<Room> preferred = chooseCollapsed ? collapsedRooms : shelterRooms;
+            List<Room> fallback = chooseCollapsed ? shelterRooms : collapsedRooms;
+
+            List<Room> selectedPool = preferred.Count > 0 ? preferred : fallback;
+            if (selectedPool.Count == 0)
             {
                 room = null;
                 localPosition = Vector3.zero;
                 return false;
             }
 
-            room = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-
-            if (IsCollapsedTunnel(room))
-                localPosition = CollapsedTunnelLocalSpawn;
-            else if (IsShelter(room))
-                localPosition = ShelterLocalSpawn;
-            else
-                localPosition = Vector3.up * 1.2f;
-
+            room = selectedPool[UnityEngine.Random.Range(0, selectedPool.Count)];
+            localPosition = IsCollapsedTunnel(room) ? CollapsedTunnelLocalSpawn : ShelterLocalSpawn;
             return true;
         }
 
@@ -177,14 +167,6 @@ namespace FacilityJobs.SerpentsHand
             string name = room.Name ?? string.Empty;
             return type.IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0 ||
                    name.IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        private static bool IsLoadingBay(Room room)
-        {
-            string type = room.Type.ToString();
-            string name = room.Name ?? string.Empty;
-            return type.IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   name.IndexOf("Loading", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static Vector3 GetFormationOffset(int index)
