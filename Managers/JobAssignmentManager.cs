@@ -107,6 +107,9 @@ namespace FacilityJobs.Managers
             if (player == null || !player.IsConnected || role == null || !role.Check(player))
                 return;
 
+            if (role is HausmeisterRole)
+                targetPosition += Vector3.up * 0.35f;
+
             player.Position = targetPosition;
             ApplyVisibleJobTag(player, role);
             ShowIntro(player, role);
