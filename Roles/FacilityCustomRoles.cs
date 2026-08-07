@@ -18,6 +18,16 @@ namespace FacilityJobs.Roles
         public override float SpawnChance { get; set; } = 0f;
         public override string ConsoleMessage { get; set; } = string.Empty;
         public override bool DisplayCustomItemMessages { get; set; } = false;
+        public abstract string IntroTitle { get; }
+        public abstract string IntroTitleColor { get; }
+        public abstract string IntroBody { get; }
+
+        public string BuildIntroText()
+        {
+            return
+                $"<align=center><size=34><b><color={IntroTitleColor}>Du bist ein {IntroTitle}.</color></b></size>\n" +
+                $"<size=24><color=white>{IntroBody}</color></size></align>";
+        }
 
         public override void AddRole(Player player)
         {
@@ -46,6 +56,9 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5101;
         public override string Name { get; set; } = "Zonenmanager";
+        public override string IntroTitle => "Zonenmanager";
+        public override string IntroTitleColor => "#F6D55C";
+        public override string IntroBody => "Du besitzt Zugriff auf nahezu alle Bereiche der Anlage und bist für die Koordination innerhalb der Foundation verantwortlich. Nutze deine Zugangsrechte mit Bedacht und unterstütze Wissenschaftler sowie Sicherheitspersonal bei der Eindämmung der Bedrohung.";
         public override string Description { get; set; } =
             "<color=#5B8CFF><b>ZONENMANAGER</b></color>\n\n" +
             "Die Heavy Containment Zone war dein Verantwortungsbereich – bis die Anlage außer Kontrolle geriet.\n\n" +
@@ -62,6 +75,9 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5102;
         public override string Name { get; set; } = "Hausmeister";
+        public override string IntroTitle => "Hausmeister";
+        public override string IntroTitleColor => "#F6D55C";
+        public override string IntroBody => "Du hältst die Anlage am Laufen und unterstützt das Foundation-Personal. Nutze deine erweiterten Zugangsrechte, um dich frei durch die Anlage zu bewegen.";
         public override string Description { get; set; } =
             "<color=#D6B35A><b>HAUSMEISTER</b></color>\n\n" +
             "Eigentlich sollte es nur eine gewöhnliche Schicht in der Light Containment Zone werden. Jetzt zählt nur noch dein Überleben.\n\n" +
@@ -78,13 +94,16 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5103;
         public override string Name { get; set; } = "Chaos Insurgency Agent";
+        public override string IntroTitle => "Wissenschaftler";
+        public override string IntroTitleColor => "#FFFF7C";
+        public override string IntroBody => "Du bist ein verdeckter Chaos-Insurgency-Agent. Du trittst als Wissenschaftler auf und arbeitest im Verborgenen für die Chaos Insurgency.";
         public override string Description { get; set; } =
             "<color=#4FA45B><b>CHAOS INSURGENCY AGENT</b></color>\n\n" +
             "Niemand in der Foundation kennt deine wahre Loyalität. Du wurdest als Wissenschaftler eingeschleust und wartest auf den richtigen Moment.\n\n" +
             "<color=#A8DDB0>• Bewahre deine Tarnung.\n" +
             "• Unterstütze die Chaos Insurgency, ohne dich früh zu verraten.\n" +
             "• Entkomme und kehre als Chaos-Soldat zurück.</color>";
-        public override string CustomInfo { get; set; } = "<color=#FFFF7C>Wissenschaftler</color>";
+        public override string CustomInfo { get; set; } = "Wissenschaftler";
         public override RoleTypeId Role { get; set; } = RoleTypeId.Scientist;
         public override List<string> Inventory { get; set; } = new List<string> { "KeycardScientist" };
     }
@@ -101,6 +120,9 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5111;
         public override string Name { get; set; } = "Serpent's Hand Warden";
+        public override string IntroTitle => "Warden der Serpent's Hand";
+        public override string IntroTitleColor => "#FF7AD9";
+        public override string IntroBody => "Du bist die Speerspitze deiner Fraktion und führst den Angriff gegen die Foundation an. Nutze deine schwere Ausrüstung, um deine Verbündeten zu schützen und den Vormarsch der Serpent's Hand zu sichern.";
         public override string Description { get; set; } = "<color=#4FA45B><b>SERPENT'S HAND — WARDEN</b></color>\n\nDu führst die Vorhut. Wo du vorrückst, soll die Kontrolle der Foundation zusammenbrechen.\n\n<color=#A8DDB0>• Führe deine Verbündeten.\n• Sichere wichtige Bereiche.\n• Unterstütze die SCPs im direkten Kampf.</color>\n\n<color=#79C987><i>" + Motto + "</i></color>";
         public override string CustomInfo { get; set; } = "Serpent's Hand — Warden";
         public override List<string> Inventory { get; set; } = new List<string> { "KeycardChaosInsurgency", "GunLogicer", "ArmorHeavy", "SCP500", "Painkillers" };
@@ -112,6 +134,9 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5112;
         public override string Name { get; set; } = "Serpent's Hand Wraith";
+        public override string IntroTitle => "Wraith der Serpent's Hand";
+        public override string IntroTitleColor => "#FF7AD9";
+        public override string IntroBody => "Du operierst aus dem Schatten und greifst den Feind dort an, wo er es am wenigsten erwartet. Nutze deine Spezialausrüstung, um Gegner zu überraschen und den Widerstand der Foundation zu brechen.";
         public override string Description { get; set; } = "<color=#4FA45B><b>SERPENT'S HAND — WRAITH</b></color>\n\nDu bist der Schatten zwischen den Korridoren. Deine Feinde sollen dich erst bemerken, wenn es bereits zu spät ist.\n\n<color=#A8DDB0>• Bewege dich unauffällig.\n• Überrasche isolierte Gegner.\n• Unterstütze die SCPs dort, wo der Feind verwundbar ist.</color>\n\n<color=#79C987><i>" + Motto + "</i></color>";
         public override string CustomInfo { get; set; } = "Serpent's Hand — Wraith";
         public override List<string> Inventory { get; set; } = new List<string> { "KeycardChaosInsurgency", "GunRevolver", "ArmorCombat", "SCP2176", "GrenadeFlash", "Painkillers", "Adrenaline" };
@@ -123,6 +148,9 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5113;
         public override string Name { get; set; } = "Serpent's Hand Seeker";
+        public override string IntroTitle => "Seeker der Serpent's Hand";
+        public override string IntroTitleColor => "#FF7AD9";
+        public override string IntroBody => "Du bist auf Aufklärung und das Aufspüren von Gegnern spezialisiert. Nutze deine Mobilität und Feuerkraft, um Bedrohungen für dein Team zu beseitigen und den SCPs den Weg freizumachen.";
         public override string Description { get; set; } = "<color=#4FA45B><b>SERPENT'S HAND — SEEKER</b></color>\n\nDu bist der Jäger. Niemand, der den SCPs gefährlich werden könnte, soll der Anlage entkommen.\n\n<color=#A8DDB0>• Verfolge fliehende Gegner.\n• Kontrolliere Engpässe und Fluchtwege.\n• Entferne Bedrohungen für die SCPs.</color>\n\n<color=#79C987><i>" + Motto + "</i></color>";
         public override string CustomInfo { get; set; } = "Serpent's Hand — Seeker";
         public override List<string> Inventory { get; set; } = new List<string> { "KeycardChaosInsurgency", "GunShotgun", "ArmorLight", "SCP207", "Medkit", "Painkillers" };
@@ -134,6 +162,9 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5114;
         public override string Name { get; set; } = "Serpent's Hand Infiltrator";
+        public override string IntroTitle => "Infiltrator der Serpent's Hand";
+        public override string IntroTitleColor => "#FF7AD9";
+        public override string IntroBody => "Du bist ein vielseitiger Kämpfer und passt dich jeder Situation an. Nutze deine Ausrüstung, um Schwachstellen auszunutzen, deine Verbündeten zu unterstützen und entscheidende Angriffe einzuleiten.";
         public override string Description { get; set; } = "<color=#4FA45B><b>SERPENT'S HAND — INFILTRATOR</b></color>\n\nDu bist der vielseitige Kämpfer der Einheit. Passe dich der Lage an und brich dort durch, wo die Foundation Schwäche zeigt.\n\n<color=#A8DDB0>• Kämpfe flexibel.\n• Nutze Ausrüstung und Gelände zu deinem Vorteil.\n• Unterstütze die SCPs bei ihrem Vormarsch.</color>\n\n<color=#79C987><i>" + Motto + "</i></color>";
         public override string CustomInfo { get; set; } = "Serpent's Hand — Infiltrator";
         public override List<string> Inventory { get; set; } = new List<string> { "KeycardChaosInsurgency", "GunA7", "ArmorCombat", "SCP1853", "GrenadeHE", "Medkit" };
