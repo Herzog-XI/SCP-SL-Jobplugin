@@ -18,8 +18,8 @@ namespace FacilityJobs.Managers
         private const float ZoneManagerIntroDuration = 7f;
         private const float CiAgentIntroDuration = 10f;
         private const float SerpentsHandIntroDuration = 10f;
-        private const float IntroTitleYCoordinate = 790f;
-        private const float IntroBodyYCoordinate = 850f;
+        private const float IntroTitleYCoordinate = 900f;
+        private const float IntroBodyYCoordinate = 960f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         private static bool hsmResolved;
