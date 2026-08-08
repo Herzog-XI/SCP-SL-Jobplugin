@@ -50,7 +50,25 @@ jobs:
       - name: Build Release
         run: msbuild SCP-SL-Jobplugin.csproj /p:Configuration=Release /p:Platform=x64 /m
 
-      - name: Upload plugin DLL
+      - name: Verify HintServiceMeow runtime assemblies
+        shell: powershell
+        run: |
+          $releaseDirs = Get-ChildItem -Path bin -Directory -Recurse | Where-Object { $_.Name -eq "Release" }
+          if (-not $releaseDirs) {
+            throw "Release output directory was not found."
+          }
+
+          $meow = Get-ChildItem -Path bin -Recurse -File | Where-Object {
+            $_.Name -like "HintServiceMeow*.dll"
+          }
+
+          if (-not $meow) {
+            throw "HintServiceMeow runtime assemblies were not copied to the build output."
+          }
+
+          $meow | ForEach-Object { Write-Host "Found HintServiceMeow assembly: $($_.FullName)" }
+
+      - name: Upload plugin and HintServiceMeow runtime
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -58,5 +76,7 @@ jobs:
           path: |
             bin/**/Release/**/FacilityJobs.dll
             bin/**/Release/FacilityJobs.dll
+            bin/**/Release/**/HintServiceMeow*.dll
+            bin/**/Release/HintServiceMeow*.dll
           if-no-files-found: error
           retention-days: 14
