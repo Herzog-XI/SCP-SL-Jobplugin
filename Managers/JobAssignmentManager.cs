@@ -173,8 +173,8 @@ namespace FacilityJobs.Managers
 
                 try
                 {
-                    var commonHint = new CommonHint(player.ReferenceHub);
-                    commonHint.ShowRoleHint(title, body, duration);
+                    PlayerUI ui = PlayerUI.Get(player);
+                    ui.CommonHint.ShowRoleHint(title, body, duration);
                     Debug($"Displayed intro for {role.Name} to {player.Nickname}.");
                 }
                 catch (Exception exception)
