@@ -18,16 +18,17 @@ namespace FacilityJobs.Managers
         private const float ZoneManagerIntroDuration = 7f;
         private const float CiAgentIntroDuration = 10f;
         private const float SerpentsHandIntroDuration = 10f;
-        private const float IntroYCoordinate = 520f;
+        private const float IntroTitleYCoordinate = 790f;
+        private const float IntroBodyYCoordinate = 850f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
+        private static bool hsmResolved;
+        private static bool hsmWarningShown;
         private static Type hintType;
         private static Type playerDisplayType;
         private static MethodInfo playerDisplayFactoryMethod;
         private static MethodInfo addHintMethod;
         private static MethodInfo removeHintMethod;
-        private static bool hsmResolved;
-        private static bool hsmWarningShown;
 
         public static void CaptureScientistSpawns()
         {
@@ -162,22 +163,14 @@ namespace FacilityJobs.Managers
 
         private static void ShowIntro(Player player, CustomRole role)
         {
-            if (player == null || !player.IsConnected || role == null)
+            if (player == null || !player.IsConnected || role is not FacilityCustomRole facilityRole)
                 return;
-
-            if (role is not FacilityCustomRole facilityRole)
-            {
-                Debug($"Intro skipped: {role.Name} is not a FacilityCustomRole.");
-                return;
-            }
 
             float duration = role is CiAgentRole
                 ? CiAgentIntroDuration
                 : role is SerpentsHandCustomRole
                     ? SerpentsHandIntroDuration
-                    : role is ZoneManagerRole
-                        ? ZoneManagerIntroDuration
-                        : HausmeisterIntroDuration;
+                    : ZoneManagerIntroDuration;
 
             string title = $"Du bist ein {facilityRole.IntroTitle}.";
             string body = facilityRole.IntroBody ?? string.Empty;
@@ -195,25 +188,36 @@ namespace FacilityJobs.Managers
                     return;
                 }
 
-                object hint = Activator.CreateInstance(hintType);
-                SetProperty(hint, "Id", $"facility_job_intro_{player.Id}");
-                SetProperty(hint, "Text", $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>\n<size=24><color=#FFFFFF>{body}</color></size>");
-                SetProperty(hint, "XCoordinate", 0f);
-                SetProperty(hint, "YCoordinate", IntroYCoordinate);
-                SetEnumProperty(hint, "YCoordinateAlign", "Bottom");
-                SetEnumProperty(hint, "Alignment", "Center");
-                SetProperty(hint, "FontSize", 24);
-                SetEnumProperty(hint, "SyncSpeed", "Fast");
-
                 object display = GetPlayerDisplay(player);
                 if (display == null)
                     throw new InvalidOperationException("HintServiceMeow returned no PlayerDisplay for the player.");
 
-                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, Y={IntroYCoordinate}).");
-                addHintMethod.Invoke(display, new[] { hint });
+                object titleHint = Activator.CreateInstance(hintType);
+                SetProperty(titleHint, "Id", $"facility_job_intro_title_{player.Id}");
+                SetProperty(titleHint, "Text", $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>");
+                SetProperty(titleHint, "XCoordinate", 0f);
+                SetProperty(titleHint, "YCoordinate", IntroTitleYCoordinate);
+                SetEnumProperty(titleHint, "YCoordinateAlign", "Bottom");
+                SetEnumProperty(titleHint, "Alignment", "Center");
+                SetProperty(titleHint, "FontSize", 24);
+                SetEnumProperty(titleHint, "SyncSpeed", "Fast");
+
+                object bodyHint = Activator.CreateInstance(hintType);
+                SetProperty(bodyHint, "Id", $"facility_job_intro_body_{player.Id}");
+                SetProperty(bodyHint, "Text", $"<size=24><color=#FFFFFF>{body}</color></size>");
+                SetProperty(bodyHint, "XCoordinate", 0f);
+                SetProperty(bodyHint, "YCoordinate", IntroBodyYCoordinate);
+                SetEnumProperty(bodyHint, "YCoordinateAlign", "Bottom");
+                SetEnumProperty(bodyHint, "Alignment", "Center");
+                SetProperty(bodyHint, "FontSize", 24);
+                SetEnumProperty(bodyHint, "SyncSpeed", "Fast");
+
+                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, titleY={IntroTitleYCoordinate}, bodyY={IntroBodyYCoordinate}).");
+                addHintMethod.Invoke(display, new[] { titleHint });
+                addHintMethod.Invoke(display, new[] { bodyHint });
                 Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname}.");
 
-                Timing.CallDelayed(duration, () => RemoveIntroHint(player, hint));
+                Timing.CallDelayed(duration, () => RemoveIntroHints(player, titleHint, bodyHint));
             }
             catch (Exception exception)
             {
@@ -221,9 +225,9 @@ namespace FacilityJobs.Managers
             }
         }
 
-        private static void RemoveIntroHint(Player player, object hint)
+        private static void RemoveIntroHints(Player player, object titleHint, object bodyHint)
         {
-            if (player == null || !player.IsConnected || hint == null)
+            if (player == null || !player.IsConnected)
                 return;
 
             try
@@ -232,8 +236,13 @@ namespace FacilityJobs.Managers
                     return;
 
                 object display = GetPlayerDisplay(player);
-                if (display != null)
-                    removeHintMethod.Invoke(display, new[] { hint });
+                if (display == null)
+                    return;
+
+                if (titleHint != null)
+                    removeHintMethod.Invoke(display, new[] { titleHint });
+                if (bodyHint != null)
+                    removeHintMethod.Invoke(display, new[] { bodyHint });
             }
             catch
             {
@@ -287,60 +296,33 @@ namespace FacilityJobs.Managers
             MethodInfo directMethod = playerDisplayType.GetMethods(BindingFlags.Public | BindingFlags.Static)
                 .FirstOrDefault(method =>
                     (method.Name == "Get" || method.Name == "GetPlayerDisplay") &&
-                    method.GetParameters().Length == 1 &&
-                    playerDisplayType.IsAssignableFrom(method.ReturnType));
+                    method.GetParameters().Length == 1);
 
             if (directMethod != null)
                 return directMethod;
 
-            foreach (Assembly assembly in assemblies.Where(item =>
-                item.GetName().Name.IndexOf("HintServiceMeow", StringComparison.OrdinalIgnoreCase) >= 0))
+            foreach (Assembly assembly in assemblies)
             {
-                foreach (Type type in GetLoadableTypes(assembly))
+                foreach (Type type in GetTypesSafe(assembly))
                 {
-                    MethodInfo extensionMethod = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
-                        .FirstOrDefault(method =>
-                            (method.Name == "GetPlayerDisplay" || method.Name == "Get") &&
-                            method.GetParameters().Length == 1 &&
-                            playerDisplayType.IsAssignableFrom(method.ReturnType));
+                    if (type == null)
+                        continue;
 
-                    if (extensionMethod != null)
-                        return extensionMethod;
+                    MethodInfo method = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                        .FirstOrDefault(candidate =>
+                            (candidate.Name == "Get" || candidate.Name == "GetPlayerDisplay") &&
+                            candidate.ReturnType == playerDisplayType &&
+                            candidate.GetParameters().Length == 1);
+
+                    if (method != null)
+                        return method;
                 }
             }
 
             return null;
         }
 
-        private static object GetPlayerDisplay(Player player)
-        {
-            ParameterInfo parameter = playerDisplayFactoryMethod.GetParameters()[0];
-            object argument = ResolvePlayerArgument(player, parameter.ParameterType);
-            if (argument == null)
-                throw new InvalidOperationException($"Cannot convert EXILED player to {parameter.ParameterType.FullName} for HintServiceMeow.");
-
-            return playerDisplayFactoryMethod.Invoke(null, new[] { argument });
-        }
-
-        private static object ResolvePlayerArgument(Player player, Type targetType)
-        {
-            if (targetType.IsInstanceOfType(player))
-                return player;
-
-            PropertyInfo referenceHubProperty = player.GetType().GetProperty("ReferenceHub", BindingFlags.Public | BindingFlags.Instance);
-            object referenceHub = referenceHubProperty?.GetValue(player);
-            if (referenceHub != null && targetType.IsInstanceOfType(referenceHub))
-                return referenceHub;
-
-            PropertyInfo gameObjectProperty = player.GetType().GetProperty("GameObject", BindingFlags.Public | BindingFlags.Instance);
-            object gameObject = gameObjectProperty?.GetValue(player);
-            if (gameObject != null && targetType.IsInstanceOfType(gameObject))
-                return gameObject;
-
-            return null;
-        }
-
-        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        private static IEnumerable<Type> GetTypesSafe(Assembly assembly)
         {
             try
             {
@@ -350,6 +332,23 @@ namespace FacilityJobs.Managers
             {
                 return exception.Types.Where(type => type != null);
             }
+            catch
+            {
+                return Array.Empty<Type>();
+            }
+        }
+
+        private static object GetPlayerDisplay(Player player)
+        {
+            if (playerDisplayFactoryMethod == null)
+                return null;
+
+            ParameterInfo parameter = playerDisplayFactoryMethod.GetParameters()[0];
+            object argument = parameter.ParameterType == typeof(Player)
+                ? player
+                : player.ReferenceHub;
+
+            return playerDisplayFactoryMethod.Invoke(null, new[] { argument });
         }
 
         private static void SetProperty(object target, string propertyName, object value)
@@ -358,22 +357,16 @@ namespace FacilityJobs.Managers
             if (property == null || !property.CanWrite)
                 return;
 
-            Type targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-            object converted = value;
-            if (value != null && !targetType.IsInstanceOfType(value))
-                converted = Convert.ChangeType(value, targetType);
-
-            property.SetValue(target, converted);
+            property.SetValue(target, value);
         }
 
-        private static void SetEnumProperty(object target, string propertyName, string enumValue)
+        private static void SetEnumProperty(object target, string propertyName, string value)
         {
             PropertyInfo property = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
             if (property == null || !property.CanWrite || !property.PropertyType.IsEnum)
                 return;
 
-            object value = Enum.Parse(property.PropertyType, enumValue, true);
-            property.SetValue(target, value);
+            property.SetValue(target, Enum.Parse(property.PropertyType, value, true));
         }
 
         private static bool IsStillRole(Player player, CustomRole role)
