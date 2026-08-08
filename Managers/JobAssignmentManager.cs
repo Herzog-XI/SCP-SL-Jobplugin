@@ -165,29 +165,23 @@ namespace FacilityJobs.Managers
             string title = $"Du bist ein {facilityRole.IntroTitle}.";
             string body = facilityRole.IntroBody ?? string.Empty;
 
-            Timing.CallDelayed(0.05f, () =>
+            try
             {
-                if (!IsStillRole(player, role))
-                    return;
-
-                try
+                Hint hint = new Hint
                 {
-                    Hint hint = new Hint
-                    {
-                        Text = $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>\n<size=24><color=#FFFFFF>{body}</color></size>",
-                        YCoordinate = IntroYCoordinate,
-                        Alignment = HintAlignment.Center,
-                        FontSize = 24,
-                    };
+                    Text = $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>\n<size=24><color=#FFFFFF>{body}</color></size>",
+                    YCoordinate = IntroYCoordinate,
+                    Alignment = HintAlignment.Center,
+                    FontSize = 24,
+                };
 
-                    PlayerDisplay.Get(player).ShowHint(hint, duration);
-                    Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname} for {duration:0.#}s at Y={IntroYCoordinate}.");
-                }
-                catch (Exception exception)
-                {
-                    Log.Error($"[FacilityJobs] Failed to show HintServiceMeow intro for {role.Name}: {exception}");
-                }
-            });
+                PlayerDisplay.Get(player).ShowHint(hint, duration);
+                Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname} for {duration:0.#}s at Y={IntroYCoordinate}.");
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"[FacilityJobs] Failed to show HintServiceMeow intro for {role.Name}: {exception}");
+            }
         }
 
         private static bool IsStillRole(Player player, CustomRole role)
