@@ -107,7 +107,7 @@ namespace FacilityJobs
                 if (ev?.Player == null)
                     return;
 
-                Timing.CallDelayed(0.75f, () => ShowForFacilityJob(ev.Player));
+                Timing.CallDelayed(2.5f, () => ShowForFacilityJob(ev.Player));
             }
 
             private void ShowForFacilityJob(Exiled.API.Features.Player player)
