@@ -7,10 +7,11 @@ using Exiled.CustomRoles.API.Features;
 using FacilityJobs.Roles;
 using HintServiceMeow.Core.Enum;
 using HintServiceMeow.Core.Models.Hints;
-using HintServiceMeow.UI.Utilities;
+using HintServiceMeow.Core.Utilities;
 using MEC;
 using PlayerRoles;
 using UnityEngine;
+using Hint = HintServiceMeow.Core.Models.Hints.Hint;
 
 namespace FacilityJobs.Managers
 {
