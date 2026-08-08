@@ -112,7 +112,7 @@ namespace FacilityJobs.Managers
 
         private static void FinalizeAssignment(Player player, CustomRole role, Vector3 targetPosition)
         {
-            if (player == null || !player.IsConnected || role == null || !role.Check(player))
+            if (player == null || !player.IsConnected || role == null)
                 return;
 
             if (role is HausmeisterRole)
@@ -120,6 +120,8 @@ namespace FacilityJobs.Managers
 
             player.Position = targetPosition;
             ApplyVisibleJobTag(player, role);
+
+            Debug($"Job assignment trigger reached for {role.Name} on {player.Nickname}. Showing intro now.");
             ShowIntro(player, role);
 
             if (role is CiAgentRole)
@@ -159,7 +161,10 @@ namespace FacilityJobs.Managers
                 return;
 
             if (role is not FacilityCustomRole facilityRole)
+            {
+                Debug($"Intro skipped: {role.Name} is not a FacilityCustomRole.");
                 return;
+            }
 
             float duration = role is CiAgentRole ? CiAgentIntroDuration : role is SerpentsHandCustomRole ? SerpentsHandIntroDuration : role is ZoneManagerRole ? ZoneManagerIntroDuration : HausmeisterIntroDuration;
             string title = $"Du bist ein {facilityRole.IntroTitle}.";
@@ -175,8 +180,9 @@ namespace FacilityJobs.Managers
                     FontSize = 24,
                 };
 
+                Debug($"Calling HintServiceMeow ShowHint for {role.Name} ({duration:0.#}s, Y={IntroYCoordinate}).");
                 PlayerDisplay.Get(player).ShowHint(hint, duration);
-                Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname} for {duration:0.#}s at Y={IntroYCoordinate}.");
+                Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname}.");
             }
             catch (Exception exception)
             {
