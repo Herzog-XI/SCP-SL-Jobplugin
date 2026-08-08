@@ -5,6 +5,8 @@ using Exiled.API.Enums;
 using Exiled.API.Features;
 using Exiled.CustomRoles.API.Features;
 using FacilityJobs.Roles;
+using HintServiceMeow.Core.Enum;
+using HintServiceMeow.Core.Models.Hints;
 using HintServiceMeow.UI.Utilities;
 using MEC;
 using PlayerRoles;
@@ -18,6 +20,7 @@ namespace FacilityJobs.Managers
         private const float ZoneManagerIntroDuration = 7f;
         private const float CiAgentIntroDuration = 10f;
         private const float SerpentsHandIntroDuration = 10f;
+        private const float IntroYCoordinate = 520f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         public static void CaptureScientistSpawns()
@@ -157,14 +160,9 @@ namespace FacilityJobs.Managers
             if (role is not FacilityCustomRole facilityRole)
                 return;
 
-            string title = $"Du bist ein {facilityRole.IntroTitle}.";
-            string[] body = facilityRole.IntroBody
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(line => line.Trim())
-                .Where(line => !string.IsNullOrWhiteSpace(line))
-                .ToArray();
-
             float duration = role is CiAgentRole ? CiAgentIntroDuration : role is SerpentsHandCustomRole ? SerpentsHandIntroDuration : role is ZoneManagerRole ? ZoneManagerIntroDuration : HausmeisterIntroDuration;
+            string title = $"Du bist ein {facilityRole.IntroTitle}.";
+            string body = facilityRole.IntroBody ?? string.Empty;
 
             Timing.CallDelayed(0.05f, () =>
             {
@@ -173,13 +171,20 @@ namespace FacilityJobs.Managers
 
                 try
                 {
-                    PlayerUI ui = PlayerUI.Get(player);
-                    ui.CommonHint.ShowRoleHint(title, body, duration);
-                    Debug($"Displayed intro for {role.Name} to {player.Nickname}.");
+                    Hint hint = new Hint
+                    {
+                        Text = $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>\n<size=24><color=#FFFFFF>{body}</color></size>",
+                        YCoordinate = IntroYCoordinate,
+                        Alignment = HintAlignment.Center,
+                        FontSize = 24,
+                    };
+
+                    PlayerDisplay.Get(player).ShowHint(hint, duration);
+                    Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname} for {duration:0.#}s at Y={IntroYCoordinate}.");
                 }
                 catch (Exception exception)
                 {
-                    Log.Error($"[FacilityJobs] Failed to show HintServiceMeow role hint for {role.Name}: {exception}");
+                    Log.Error($"[FacilityJobs] Failed to show HintServiceMeow intro for {role.Name}: {exception}");
                 }
             });
         }
