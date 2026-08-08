@@ -1,17 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Exiled.API.Enums;
 using Exiled.API.Features;
 using Exiled.CustomRoles.API.Features;
 using FacilityJobs.Roles;
-using HintServiceMeow.Core.Enum;
-using HintServiceMeow.Core.Models.Hints;
-using HintServiceMeow.Core.Utilities;
 using MEC;
 using PlayerRoles;
 using UnityEngine;
-using Hint = HintServiceMeow.Core.Models.Hints.Hint;
 
 namespace FacilityJobs.Managers
 {
@@ -23,6 +20,14 @@ namespace FacilityJobs.Managers
         private const float SerpentsHandIntroDuration = 10f;
         private const float IntroYCoordinate = 520f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
+
+        private static Type hintType;
+        private static Type playerDisplayType;
+        private static MethodInfo playerDisplayFactoryMethod;
+        private static MethodInfo addHintMethod;
+        private static MethodInfo removeHintMethod;
+        private static bool hsmResolved;
+        private static bool hsmWarningShown;
 
         public static void CaptureScientistSpawns()
         {
@@ -166,28 +171,209 @@ namespace FacilityJobs.Managers
                 return;
             }
 
-            float duration = role is CiAgentRole ? CiAgentIntroDuration : role is SerpentsHandCustomRole ? SerpentsHandIntroDuration : role is ZoneManagerRole ? ZoneManagerIntroDuration : HausmeisterIntroDuration;
+            float duration = role is CiAgentRole
+                ? CiAgentIntroDuration
+                : role is SerpentsHandCustomRole
+                    ? SerpentsHandIntroDuration
+                    : role is ZoneManagerRole
+                        ? ZoneManagerIntroDuration
+                        : HausmeisterIntroDuration;
+
             string title = $"Du bist ein {facilityRole.IntroTitle}.";
             string body = facilityRole.IntroBody ?? string.Empty;
 
             try
             {
-                Hint hint = new Hint
+                if (!ResolveHintServiceMeow())
                 {
-                    Text = $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>\n<size=24><color=#FFFFFF>{body}</color></size>",
-                    YCoordinate = IntroYCoordinate,
-                    Alignment = HintAlignment.Center,
-                    FontSize = 24,
-                };
+                    if (!hsmWarningShown)
+                    {
+                        hsmWarningShown = true;
+                        Log.Warn("[FacilityJobs] HintServiceMeow API was not found. Job intro is disabled.");
+                    }
 
-                Debug($"Calling HintServiceMeow ShowHint for {role.Name} ({duration:0.#}s, Y={IntroYCoordinate}).");
-                PlayerDisplay.Get(player).ShowHint(hint, duration);
+                    return;
+                }
+
+                object hint = Activator.CreateInstance(hintType);
+                SetProperty(hint, "Id", $"facility_job_intro_{player.Id}");
+                SetProperty(hint, "Text", $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>\n<size=24><color=#FFFFFF>{body}</color></size>");
+                SetProperty(hint, "XCoordinate", 0f);
+                SetProperty(hint, "YCoordinate", IntroYCoordinate);
+                SetEnumProperty(hint, "YCoordinateAlign", "Bottom");
+                SetEnumProperty(hint, "Alignment", "Center");
+                SetProperty(hint, "FontSize", 24);
+                SetEnumProperty(hint, "SyncSpeed", "Fast");
+
+                object display = GetPlayerDisplay(player);
+                if (display == null)
+                    throw new InvalidOperationException("HintServiceMeow returned no PlayerDisplay for the player.");
+
+                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, Y={IntroYCoordinate}).");
+                addHintMethod.Invoke(display, new[] { hint });
                 Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname}.");
+
+                Timing.CallDelayed(duration, () => RemoveIntroHint(player, hint));
             }
             catch (Exception exception)
             {
                 Log.Error($"[FacilityJobs] Failed to show HintServiceMeow intro for {role.Name}: {exception}");
             }
+        }
+
+        private static void RemoveIntroHint(Player player, object hint)
+        {
+            if (player == null || !player.IsConnected || hint == null)
+                return;
+
+            try
+            {
+                if (!ResolveHintServiceMeow())
+                    return;
+
+                object display = GetPlayerDisplay(player);
+                if (display != null)
+                    removeHintMethod.Invoke(display, new[] { hint });
+            }
+            catch
+            {
+                // Player may already be disconnected during cleanup.
+            }
+        }
+
+        private static bool ResolveHintServiceMeow()
+        {
+            if (hsmResolved)
+                return true;
+
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (Assembly assembly in assemblies)
+            {
+                hintType = assembly.GetType("HintServiceMeow.Core.Models.Hints.Hint", false);
+                if (hintType != null)
+                    break;
+            }
+
+            foreach (Assembly assembly in assemblies)
+            {
+                playerDisplayType = assembly.GetType("HintServiceMeow.Core.Utilities.PlayerDisplay", false);
+                if (playerDisplayType != null)
+                    break;
+            }
+
+            if (hintType == null || playerDisplayType == null)
+                return false;
+
+            playerDisplayFactoryMethod = FindPlayerDisplayFactory(assemblies);
+            if (playerDisplayFactoryMethod == null)
+                return false;
+
+            addHintMethod = playerDisplayType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(method => method.Name == "AddHint" && method.GetParameters().Length == 1);
+            removeHintMethod = playerDisplayType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(method => method.Name == "RemoveHint" && method.GetParameters().Length == 1);
+
+            if (addHintMethod == null || removeHintMethod == null)
+                return false;
+
+            hsmResolved = true;
+            Log.Info($"[FacilityJobs] HintServiceMeow HUD API detected through {playerDisplayFactoryMethod.DeclaringType?.FullName}.{playerDisplayFactoryMethod.Name}.");
+            return true;
+        }
+
+        private static MethodInfo FindPlayerDisplayFactory(IEnumerable<Assembly> assemblies)
+        {
+            MethodInfo directMethod = playerDisplayType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .FirstOrDefault(method =>
+                    (method.Name == "Get" || method.Name == "GetPlayerDisplay") &&
+                    method.GetParameters().Length == 1 &&
+                    playerDisplayType.IsAssignableFrom(method.ReturnType));
+
+            if (directMethod != null)
+                return directMethod;
+
+            foreach (Assembly assembly in assemblies.Where(item =>
+                item.GetName().Name.IndexOf("HintServiceMeow", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                foreach (Type type in GetLoadableTypes(assembly))
+                {
+                    MethodInfo extensionMethod = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                        .FirstOrDefault(method =>
+                            (method.Name == "GetPlayerDisplay" || method.Name == "Get") &&
+                            method.GetParameters().Length == 1 &&
+                            playerDisplayType.IsAssignableFrom(method.ReturnType));
+
+                    if (extensionMethod != null)
+                        return extensionMethod;
+                }
+            }
+
+            return null;
+        }
+
+        private static object GetPlayerDisplay(Player player)
+        {
+            ParameterInfo parameter = playerDisplayFactoryMethod.GetParameters()[0];
+            object argument = ResolvePlayerArgument(player, parameter.ParameterType);
+            if (argument == null)
+                throw new InvalidOperationException($"Cannot convert EXILED player to {parameter.ParameterType.FullName} for HintServiceMeow.");
+
+            return playerDisplayFactoryMethod.Invoke(null, new[] { argument });
+        }
+
+        private static object ResolvePlayerArgument(Player player, Type targetType)
+        {
+            if (targetType.IsInstanceOfType(player))
+                return player;
+
+            PropertyInfo referenceHubProperty = player.GetType().GetProperty("ReferenceHub", BindingFlags.Public | BindingFlags.Instance);
+            object referenceHub = referenceHubProperty?.GetValue(player);
+            if (referenceHub != null && targetType.IsInstanceOfType(referenceHub))
+                return referenceHub;
+
+            PropertyInfo gameObjectProperty = player.GetType().GetProperty("GameObject", BindingFlags.Public | BindingFlags.Instance);
+            object gameObject = gameObjectProperty?.GetValue(player);
+            if (gameObject != null && targetType.IsInstanceOfType(gameObject))
+                return gameObject;
+
+            return null;
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException exception)
+            {
+                return exception.Types.Where(type => type != null);
+            }
+        }
+
+        private static void SetProperty(object target, string propertyName, object value)
+        {
+            PropertyInfo property = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            if (property == null || !property.CanWrite)
+                return;
+
+            Type targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+            object converted = value;
+            if (value != null && !targetType.IsInstanceOfType(value))
+                converted = Convert.ChangeType(value, targetType);
+
+            property.SetValue(target, converted);
+        }
+
+        private static void SetEnumProperty(object target, string propertyName, string enumValue)
+        {
+            PropertyInfo property = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            if (property == null || !property.CanWrite || !property.PropertyType.IsEnum)
+                return;
+
+            object value = Enum.Parse(property.PropertyType, enumValue, true);
+            property.SetValue(target, value);
         }
 
         private static bool IsStillRole(Player player, CustomRole role)
