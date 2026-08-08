@@ -125,6 +125,10 @@ namespace FacilityJobs.Managers
                 targetPosition += Vector3.up * 0.35f;
 
             player.Position = targetPosition;
+
+            if (role is SerpentsHandCustomRole)
+                ApplySerpentsHandShelterRotation(player, targetPosition);
+
             ApplyVisibleJobTag(player, role);
 
             Debug($"Job assignment trigger reached for {role.Name} on {player.Nickname}. Showing intro now.");
@@ -134,6 +138,17 @@ namespace FacilityJobs.Managers
                 RoundState.CiAgentUserId = player.UserId;
 
             Debug($"Finalized {role.Name} for {player.Nickname} at {targetPosition}.");
+        }
+
+        private static void ApplySerpentsHandShelterRotation(Player player, Vector3 targetPosition)
+        {
+            Room room = Room.Get(targetPosition);
+            if (room == null || room.Type.ToString().IndexOf("Shelter", StringComparison.OrdinalIgnoreCase) < 0)
+                return;
+
+            float y = room.Rotation.eulerAngles.y + 180f;
+            player.Rotation = Quaternion.Euler(0f, y, 0f);
+            Debug($"Rotated Serpent's Hand spawn in {room.Type} by 180 degrees toward the shelter door.");
         }
 
         public static void ApplyVisibleJobTag(Player player, CustomRole role)
