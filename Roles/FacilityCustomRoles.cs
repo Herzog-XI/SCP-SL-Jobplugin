@@ -22,13 +22,6 @@ namespace FacilityJobs.Roles
         public abstract string IntroTitleColor { get; }
         public abstract string IntroBody { get; }
 
-        public string BuildIntroText()
-        {
-            return
-                $"<align=center><size=34><b><color={IntroTitleColor}>Du bist ein {IntroTitle}.</color></b></size>\n" +
-                $"<size=24><color=white>{IntroBody}</color></size></align>";
-        }
-
         public override void AddRole(Player player)
         {
             if (player != null && Role != RoleTypeId.None && player.Role.Type == Role)
@@ -95,7 +88,7 @@ namespace FacilityJobs.Roles
         public override uint Id { get; set; } = 5103;
         public override string Name { get; set; } = "Chaos Insurgency Agent";
         public override string IntroTitle => "Wissenschaftler";
-        public override string IntroTitleColor => "#FFFF7C";
+        public override string IntroTitleColor => "#4FA45B";
         public override string IntroBody => "Du bist ein verdeckter Chaos-Insurgency-Agent. Du trittst als Wissenschaftler auf und arbeitest im Verborgenen für die Chaos Insurgency.";
         public override string Description { get; set; } =
             "<color=#4FA45B><b>CHAOS INSURGENCY AGENT</b></color>\n\n" +
