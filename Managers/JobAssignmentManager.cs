@@ -218,7 +218,7 @@ namespace FacilityJobs.Managers
 
                 object titleHint = Activator.CreateInstance(hintType);
                 SetProperty(titleHint, "Id", $"facility_job_intro_title_{player.Id}");
-                SetProperty(titleHint, "Text", $"<size={IntroFontSize:0}><b><color=#FFFFFF>Du bist ein </color><color={facilityRole.IntroTitleColor}>{facilityRole.IntroTitle}.</color></b></size>");
+                SetProperty(titleHint, "Text", $"<size={IntroFontSize:0}><color=#FFFFFF>Du bist ein </color><color={facilityRole.IntroTitleColor}>{facilityRole.IntroTitle}.</color></size>");
                 SetProperty(titleHint, "XCoordinate", titleX);
                 SetProperty(titleHint, "YCoordinate", titleY);
                 SetEnumProperty(titleHint, "YCoordinateAlign", "Bottom");
@@ -279,8 +279,7 @@ namespace FacilityJobs.Managers
                     remaining = remaining.Substring(split).TrimStart();
                 }
 
-                if (remaining.Length > 0)
-                    lines.Add(remaining);
+                lines.Add(remaining);
             }
 
             if (lines.Count == 0)
