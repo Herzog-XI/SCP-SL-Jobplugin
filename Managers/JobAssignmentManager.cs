@@ -18,9 +18,6 @@ namespace FacilityJobs.Managers
         private const float ZoneManagerIntroDuration = 7f;
         private const float CiAgentIntroDuration = 10f;
         private const float SerpentsHandIntroDuration = 10f;
-        private const float IntroTitleYCoordinate = 690f;
-        private const float IntroBodyStartYCoordinate = 735f;
-        private const float IntroBodyLineSpacing = 32f;
         private const int IntroBodyWrapLength = 68;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
@@ -191,6 +188,14 @@ namespace FacilityJobs.Managers
 
             string title = $"Du bist ein {facilityRole.IntroTitle}.";
             string body = facilityRole.IntroBody ?? string.Empty;
+            Config config = Plugin.Instance?.Config ?? new Config();
+            bool isTutorial = role is SerpentsHandCustomRole;
+
+            float titleX = isTutorial ? config.TutorialHintXCoordinate : config.JobHintXCoordinate;
+            float titleY = isTutorial ? config.TutorialHintTitleYCoordinate : config.JobHintTitleYCoordinate;
+            float bodyX = isTutorial ? config.TutorialHintXCoordinate : config.JobHintXCoordinate;
+            float bodyStartY = isTutorial ? config.TutorialHintBodyStartYCoordinate : config.JobHintBodyStartYCoordinate;
+            float bodyLineSpacing = isTutorial ? config.TutorialHintBodyLineSpacing : config.JobHintBodyLineSpacing;
 
             try
             {
@@ -214,8 +219,8 @@ namespace FacilityJobs.Managers
                 object titleHint = Activator.CreateInstance(hintType);
                 SetProperty(titleHint, "Id", $"facility_job_intro_title_{player.Id}");
                 SetProperty(titleHint, "Text", $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>");
-                SetProperty(titleHint, "XCoordinate", 0f);
-                SetProperty(titleHint, "YCoordinate", IntroTitleYCoordinate);
+                SetProperty(titleHint, "XCoordinate", titleX);
+                SetProperty(titleHint, "YCoordinate", titleY);
                 SetEnumProperty(titleHint, "YCoordinateAlign", "Bottom");
                 SetEnumProperty(titleHint, "Alignment", "Center");
                 SetProperty(titleHint, "FontSize", 24);
@@ -228,8 +233,8 @@ namespace FacilityJobs.Managers
                     object bodyHint = Activator.CreateInstance(hintType);
                     SetProperty(bodyHint, "Id", $"facility_job_intro_body_{player.Id}_{index}");
                     SetProperty(bodyHint, "Text", $"<size=24><color=#FFFFFF>{bodyLines[index]}</color></size>");
-                    SetProperty(bodyHint, "XCoordinate", 0f);
-                    SetProperty(bodyHint, "YCoordinate", IntroBodyStartYCoordinate + (index * IntroBodyLineSpacing));
+                    SetProperty(bodyHint, "XCoordinate", bodyX);
+                    SetProperty(bodyHint, "YCoordinate", bodyStartY + (index * bodyLineSpacing));
                     SetEnumProperty(bodyHint, "YCoordinateAlign", "Bottom");
                     SetEnumProperty(bodyHint, "Alignment", "Center");
                     SetProperty(bodyHint, "FontSize", 24);
@@ -237,7 +242,7 @@ namespace FacilityJobs.Managers
                     introHints.Add(bodyHint);
                 }
 
-                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, titleY={IntroTitleYCoordinate}, bodyStartY={IntroBodyStartYCoordinate}, lines={bodyLines.Count}).");
+                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, x={titleX:0.###}, titleY={titleY:0.###}, bodyStartY={bodyStartY:0.###}, spacing={bodyLineSpacing:0.###}, lines={bodyLines.Count}).");
 
                 foreach (object hint in introHints)
                     addHintMethod.Invoke(display, new[] { hint });
