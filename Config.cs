@@ -32,8 +32,14 @@ namespace FacilityJobs
         [Description("X coordinate for the whole normal Facility Job intro block.")]
         public float JobHintXCoordinate { get; set; } = 0f;
 
-        [Description("Y coordinate for the whole normal Facility Job intro block.")]
+        [Description("Y coordinate for the whole normal Facility Job intro block. The title and body move together from this anchor.")]
         public float JobHintYCoordinate { get; set; } = 690f;
+
+        [Description("Internal title Y coordinate derived from JobHintYCoordinate. Do not edit separately.")]
+        public float JobHintTitleYCoordinate => JobHintYCoordinate;
+
+        [Description("Internal body start Y coordinate derived from JobHintYCoordinate. Do not edit separately.")]
+        public float JobHintBodyStartYCoordinate => JobHintYCoordinate + 25f;
 
         [Description("Vertical spacing between normal Facility Job intro body lines.")]
         public float JobHintBodyLineSpacing { get; set; } = 28f;
@@ -41,8 +47,14 @@ namespace FacilityJobs
         [Description("X coordinate for the whole Tutorial/Serpent's Hand intro block.")]
         public float TutorialHintXCoordinate { get; set; } = 0f;
 
-        [Description("Y coordinate for the whole Tutorial/Serpent's Hand intro block.")]
+        [Description("Y coordinate for the whole Tutorial/Serpent's Hand intro block. The title and body move together from this anchor.")]
         public float TutorialHintYCoordinate { get; set; } = 690f;
+
+        [Description("Internal title Y coordinate derived from TutorialHintYCoordinate. Do not edit separately.")]
+        public float TutorialHintTitleYCoordinate => TutorialHintYCoordinate;
+
+        [Description("Internal body start Y coordinate derived from TutorialHintYCoordinate. Do not edit separately.")]
+        public float TutorialHintBodyStartYCoordinate => TutorialHintYCoordinate + 25f;
 
         [Description("Vertical spacing between Tutorial/Serpent's Hand intro body lines.")]
         public float TutorialHintBodyLineSpacing { get; set; } = 28f;
