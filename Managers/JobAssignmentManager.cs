@@ -18,8 +18,10 @@ namespace FacilityJobs.Managers
         private const float ZoneManagerIntroDuration = 7f;
         private const float CiAgentIntroDuration = 10f;
         private const float SerpentsHandIntroDuration = 10f;
-        private const float IntroTitleYCoordinate = 900f;
-        private const float IntroBodyYCoordinate = 960f;
+        private const float IntroTitleYCoordinate = 690f;
+        private const float IntroBodyStartYCoordinate = 735f;
+        private const float IntroBodyLineSpacing = 32f;
+        private const int IntroBodyWrapLength = 68;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         private static bool hsmResolved;
@@ -207,6 +209,8 @@ namespace FacilityJobs.Managers
                 if (display == null)
                     throw new InvalidOperationException("HintServiceMeow returned no PlayerDisplay for the player.");
 
+                List<object> introHints = new List<object>();
+
                 object titleHint = Activator.CreateInstance(hintType);
                 SetProperty(titleHint, "Id", $"facility_job_intro_title_{player.Id}");
                 SetProperty(titleHint, "Text", $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>");
@@ -216,23 +220,30 @@ namespace FacilityJobs.Managers
                 SetEnumProperty(titleHint, "Alignment", "Center");
                 SetProperty(titleHint, "FontSize", 24);
                 SetEnumProperty(titleHint, "SyncSpeed", "Fast");
+                introHints.Add(titleHint);
 
-                object bodyHint = Activator.CreateInstance(hintType);
-                SetProperty(bodyHint, "Id", $"facility_job_intro_body_{player.Id}");
-                SetProperty(bodyHint, "Text", $"<size=24><color=#FFFFFF>{body}</color></size>");
-                SetProperty(bodyHint, "XCoordinate", 0f);
-                SetProperty(bodyHint, "YCoordinate", IntroBodyYCoordinate);
-                SetEnumProperty(bodyHint, "YCoordinateAlign", "Bottom");
-                SetEnumProperty(bodyHint, "Alignment", "Center");
-                SetProperty(bodyHint, "FontSize", 24);
-                SetEnumProperty(bodyHint, "SyncSpeed", "Fast");
+                List<string> bodyLines = WrapIntroBody(body, IntroBodyWrapLength);
+                for (int index = 0; index < bodyLines.Count; index++)
+                {
+                    object bodyHint = Activator.CreateInstance(hintType);
+                    SetProperty(bodyHint, "Id", $"facility_job_intro_body_{player.Id}_{index}");
+                    SetProperty(bodyHint, "Text", $"<size=24><color=#FFFFFF>{bodyLines[index]}</color></size>");
+                    SetProperty(bodyHint, "XCoordinate", 0f);
+                    SetProperty(bodyHint, "YCoordinate", IntroBodyStartYCoordinate + (index * IntroBodyLineSpacing));
+                    SetEnumProperty(bodyHint, "YCoordinateAlign", "Bottom");
+                    SetEnumProperty(bodyHint, "Alignment", "Center");
+                    SetProperty(bodyHint, "FontSize", 24);
+                    SetEnumProperty(bodyHint, "SyncSpeed", "Fast");
+                    introHints.Add(bodyHint);
+                }
 
-                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, titleY={IntroTitleYCoordinate}, bodyY={IntroBodyYCoordinate}).");
-                addHintMethod.Invoke(display, new[] { titleHint });
-                addHintMethod.Invoke(display, new[] { bodyHint });
+                Debug($"Calling HintServiceMeow AddHint for {role.Name} ({duration:0.#}s, titleY={IntroTitleYCoordinate}, bodyStartY={IntroBodyStartYCoordinate}, lines={bodyLines.Count}).");
+
+                foreach (object hint in introHints)
+                    addHintMethod.Invoke(display, new[] { hint });
+
                 Debug($"Displayed MeowHint intro for {role.Name} to {player.Nickname}.");
-
-                Timing.CallDelayed(duration, () => RemoveIntroHints(player, titleHint, bodyHint));
+                Timing.CallDelayed(duration, () => RemoveIntroHints(player, introHints));
             }
             catch (Exception exception)
             {
@@ -240,7 +251,40 @@ namespace FacilityJobs.Managers
             }
         }
 
-        private static void RemoveIntroHints(Player player, object titleHint, object bodyHint)
+        private static List<string> WrapIntroBody(string body, int maxLength)
+        {
+            List<string> lines = new List<string>();
+
+            foreach (string paragraph in body.Replace("\r", string.Empty).Split('\n'))
+            {
+                string remaining = paragraph.Trim();
+                if (remaining.Length == 0)
+                {
+                    if (lines.Count > 0 && lines[lines.Count - 1].Length > 0)
+                        lines.Add(string.Empty);
+                    continue;
+                }
+
+                while (remaining.Length > maxLength)
+                {
+                    int split = remaining.LastIndexOf(' ', maxLength);
+                    if (split <= 0)
+                        split = maxLength;
+
+                    lines.Add(remaining.Substring(0, split).Trim());
+                    remaining = remaining.Substring(split).TrimStart();
+                }
+
+                lines.Add(remaining);
+            }
+
+            if (lines.Count == 0)
+                lines.Add(string.Empty);
+
+            return lines;
+        }
+
+        private static void RemoveIntroHints(Player player, List<object> introHints)
         {
             if (player == null || !player.IsConnected)
                 return;
@@ -254,10 +298,11 @@ namespace FacilityJobs.Managers
                 if (display == null)
                     return;
 
-                if (titleHint != null)
-                    removeHintMethod.Invoke(display, new[] { titleHint });
-                if (bodyHint != null)
-                    removeHintMethod.Invoke(display, new[] { bodyHint });
+                foreach (object hint in introHints)
+                {
+                    if (hint != null)
+                        removeHintMethod.Invoke(display, new[] { hint });
+                }
             }
             catch
             {
