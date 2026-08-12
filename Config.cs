@@ -36,10 +36,10 @@ namespace FacilityJobs
         public float JobHintTitleYCoordinate { get; set; } = 690f;
 
         [Description("Starting Y coordinate for the body of normal Facility Job intro hints.")]
-        public float JobHintBodyStartYCoordinate { get; set; } = 735f;
+        public float JobHintBodyStartYCoordinate { get; set; } = 715f;
 
         [Description("Vertical spacing between normal Facility Job intro body lines.")]
-        public float JobHintBodyLineSpacing { get; set; } = 32f;
+        public float JobHintBodyLineSpacing { get; set; } = 28f;
 
         [Description("X coordinate for Tutorial/Serpent's Hand intro hints.")]
         public float TutorialHintXCoordinate { get; set; } = 0f;
@@ -48,9 +48,9 @@ namespace FacilityJobs
         public float TutorialHintTitleYCoordinate { get; set; } = 690f;
 
         [Description("Starting Y coordinate for the body of Tutorial/Serpent's Hand intro hints.")]
-        public float TutorialHintBodyStartYCoordinate { get; set; } = 735f;
+        public float TutorialHintBodyStartYCoordinate { get; set; } = 715f;
 
         [Description("Vertical spacing between Tutorial/Serpent's Hand intro body lines.")]
-        public float TutorialHintBodyLineSpacing { get; set; } = 32f;
+        public float TutorialHintBodyLineSpacing { get; set; } = 28f;
     }
 }
