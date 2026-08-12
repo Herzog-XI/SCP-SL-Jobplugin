@@ -18,7 +18,8 @@ namespace FacilityJobs.Managers
         private const float ZoneManagerIntroDuration = 7f;
         private const float CiAgentIntroDuration = 10f;
         private const float SerpentsHandIntroDuration = 10f;
-        private const int IntroBodyWrapLength = 68;
+        private const int IntroBodyWrapLength = 90;
+        private const float IntroFontSize = 24f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
 
         private static bool hsmResolved;
@@ -186,7 +187,6 @@ namespace FacilityJobs.Managers
                     ? SerpentsHandIntroDuration
                     : ZoneManagerIntroDuration;
 
-            string title = $"Du bist ein {facilityRole.IntroTitle}.";
             string body = facilityRole.IntroBody ?? string.Empty;
             Config config = Plugin.Instance?.Config ?? new Config();
             bool isTutorial = role is SerpentsHandCustomRole;
@@ -218,26 +218,29 @@ namespace FacilityJobs.Managers
 
                 object titleHint = Activator.CreateInstance(hintType);
                 SetProperty(titleHint, "Id", $"facility_job_intro_title_{player.Id}");
-                SetProperty(titleHint, "Text", $"<size=34><b><color={facilityRole.IntroTitleColor}>{title}</color></b></size>");
+                SetProperty(titleHint, "Text", $"<size={IntroFontSize:0}><b><color=#FFFFFF>Du bist ein </color><color={facilityRole.IntroTitleColor}>{facilityRole.IntroTitle}.</color></b></size>");
                 SetProperty(titleHint, "XCoordinate", titleX);
                 SetProperty(titleHint, "YCoordinate", titleY);
                 SetEnumProperty(titleHint, "YCoordinateAlign", "Bottom");
                 SetEnumProperty(titleHint, "Alignment", "Center");
-                SetProperty(titleHint, "FontSize", 24);
+                SetProperty(titleHint, "FontSize", (int)IntroFontSize);
                 SetEnumProperty(titleHint, "SyncSpeed", "Fast");
                 introHints.Add(titleHint);
 
                 List<string> bodyLines = WrapIntroBody(body, IntroBodyWrapLength);
                 for (int index = 0; index < bodyLines.Count; index++)
                 {
+                    if (string.IsNullOrWhiteSpace(bodyLines[index]))
+                        continue;
+
                     object bodyHint = Activator.CreateInstance(hintType);
                     SetProperty(bodyHint, "Id", $"facility_job_intro_body_{player.Id}_{index}");
-                    SetProperty(bodyHint, "Text", $"<size=24><color=#FFFFFF>{bodyLines[index]}</color></size>");
+                    SetProperty(bodyHint, "Text", $"<size={IntroFontSize:0}><color=#FFFFFF>{bodyLines[index]}</color></size>");
                     SetProperty(bodyHint, "XCoordinate", bodyX);
                     SetProperty(bodyHint, "YCoordinate", bodyStartY + (index * bodyLineSpacing));
                     SetEnumProperty(bodyHint, "YCoordinateAlign", "Bottom");
                     SetEnumProperty(bodyHint, "Alignment", "Center");
-                    SetProperty(bodyHint, "FontSize", 24);
+                    SetProperty(bodyHint, "FontSize", (int)IntroFontSize);
                     SetEnumProperty(bodyHint, "SyncSpeed", "Fast");
                     introHints.Add(bodyHint);
                 }
@@ -264,11 +267,7 @@ namespace FacilityJobs.Managers
             {
                 string remaining = paragraph.Trim();
                 if (remaining.Length == 0)
-                {
-                    if (lines.Count > 0 && lines[lines.Count - 1].Length > 0)
-                        lines.Add(string.Empty);
                     continue;
-                }
 
                 while (remaining.Length > maxLength)
                 {
@@ -280,7 +279,8 @@ namespace FacilityJobs.Managers
                     remaining = remaining.Substring(split).TrimStart();
                 }
 
-                lines.Add(remaining);
+                if (remaining.Length > 0)
+                    lines.Add(remaining);
             }
 
             if (lines.Count == 0)
