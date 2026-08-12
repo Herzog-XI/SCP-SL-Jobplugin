@@ -29,26 +29,20 @@ namespace FacilityJobs
         [Description("Maximum delay in seconds after the second normal respawn wave before Serpent's Hand spawns.")]
         public int SerpentsHandMaximumDelay { get; set; } = 180;
 
-        [Description("X coordinate for normal Facility Job intro hints.")]
+        [Description("X coordinate for the whole normal Facility Job intro block.")]
         public float JobHintXCoordinate { get; set; } = 0f;
 
-        [Description("Y coordinate for the title of normal Facility Job intro hints.")]
-        public float JobHintTitleYCoordinate { get; set; } = 690f;
-
-        [Description("Starting Y coordinate for the body of normal Facility Job intro hints.")]
-        public float JobHintBodyStartYCoordinate { get; set; } = 715f;
+        [Description("Y coordinate for the whole normal Facility Job intro block.")]
+        public float JobHintYCoordinate { get; set; } = 690f;
 
         [Description("Vertical spacing between normal Facility Job intro body lines.")]
         public float JobHintBodyLineSpacing { get; set; } = 28f;
 
-        [Description("X coordinate for Tutorial/Serpent's Hand intro hints.")]
+        [Description("X coordinate for the whole Tutorial/Serpent's Hand intro block.")]
         public float TutorialHintXCoordinate { get; set; } = 0f;
 
-        [Description("Y coordinate for the title of Tutorial/Serpent's Hand intro hints.")]
-        public float TutorialHintTitleYCoordinate { get; set; } = 690f;
-
-        [Description("Starting Y coordinate for the body of Tutorial/Serpent's Hand intro hints.")]
-        public float TutorialHintBodyStartYCoordinate { get; set; } = 715f;
+        [Description("Y coordinate for the whole Tutorial/Serpent's Hand intro block.")]
+        public float TutorialHintYCoordinate { get; set; } = 690f;
 
         [Description("Vertical spacing between Tutorial/Serpent's Hand intro body lines.")]
         public float TutorialHintBodyLineSpacing { get; set; } = 28f;
