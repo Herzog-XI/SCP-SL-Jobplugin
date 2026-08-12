@@ -87,7 +87,7 @@ namespace FacilityJobs.Roles
     {
         public override uint Id { get; set; } = 5103;
         public override string Name { get; set; } = "Chaos Insurgency Agent";
-        public override string IntroTitle => "Wissenschaftler";
+        public override string IntroTitle => "Chaos Insurgency Agent";
         public override string IntroTitleColor => "#4FA45B";
         public override string IntroBody => "Du bist ein verdeckter Chaos-Insurgency-Agent. Du trittst als Wissenschaftler auf und arbeitest im Verborgenen für die Chaos Insurgency.";
         public override string Description { get; set; } =
