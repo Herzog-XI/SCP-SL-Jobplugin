@@ -14,10 +14,10 @@ namespace FacilityJobs.Managers
 {
     internal static class JobAssignmentManager
     {
-        private const float HausmeisterIntroDuration = 7f;
-        private const float ZoneManagerIntroDuration = 7f;
-        private const float CiAgentIntroDuration = 10f;
-        private const float SerpentsHandIntroDuration = 10f;
+        private const float HausmeisterIntroDuration = 14f;
+        private const float ZoneManagerIntroDuration = 14f;
+        private const float CiAgentIntroDuration = 20f;
+        private const float SerpentsHandIntroDuration = 20f;
         private const int IntroBodyWrapLength = 90;
         private const float IntroFontSize = 24f;
         private static readonly List<Vector3> scientistSpawnPositions = new List<Vector3>();
@@ -176,7 +176,7 @@ namespace FacilityJobs.Managers
             Debug($"Reapplied CI disguise tag for {player.Nickname}.");
         }
 
-        private static void ShowIntro(Player player, CustomRole role)
+        public static void ShowIntro(Player player, CustomRole role)
         {
             if (player == null || !player.IsConnected || role is not FacilityCustomRole facilityRole)
                 return;
@@ -279,7 +279,8 @@ namespace FacilityJobs.Managers
                     remaining = remaining.Substring(split).TrimStart();
                 }
 
-                lines.Add(remaining);
+                if (remaining.Length > 0)
+                    lines.Add(remaining);
             }
 
             if (lines.Count == 0)
