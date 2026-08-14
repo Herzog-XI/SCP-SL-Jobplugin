@@ -84,6 +84,7 @@ namespace FacilityJobs.SerpentsHand
                     if (customRole != null)
                     {
                         JobAssignmentManager.ApplyVisibleJobTag(player, customRole);
+                        JobAssignmentManager.ShowIntro(player, customRole);
                     }
                 });
             }
