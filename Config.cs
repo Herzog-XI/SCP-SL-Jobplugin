@@ -33,7 +33,7 @@ namespace FacilityJobs
         public float JobHintXCoordinate { get; set; } = 0f;
 
         [Description("Y coordinate for the whole normal Facility Job intro block. The title and body move together from this anchor.")]
-        public float JobHintYCoordinate { get; set; } = 690f;
+        public float JobHintYCoordinate { get; set; } = 695f;
 
         [Description("Internal title Y coordinate derived from JobHintYCoordinate. Do not edit separately.")]
         public float JobHintTitleYCoordinate => JobHintYCoordinate;
@@ -48,7 +48,7 @@ namespace FacilityJobs
         public float TutorialHintXCoordinate { get; set; } = 0f;
 
         [Description("Y coordinate for the whole Tutorial/Serpent's Hand intro block. The title and body move together from this anchor.")]
-        public float TutorialHintYCoordinate { get; set; } = 690f;
+        public float TutorialHintYCoordinate { get; set; } = 695f;
 
         [Description("Internal title Y coordinate derived from TutorialHintYCoordinate. Do not edit separately.")]
         public float TutorialHintTitleYCoordinate => TutorialHintYCoordinate;
