@@ -156,9 +156,12 @@ namespace FacilityJobs.Managers
             if (player == null || !player.IsConnected || role == null)
                 return;
 
-            // Show the actual custom job name in the role tag and keep the player's
-            // real nickname visible to everyone instead of inheriting the base-role disguise.
-            player.CustomInfo = role.Name ?? role.CustomInfo ?? string.Empty;
+            // CI agents remain disguised as Scientists to other players.
+            string visibleJobName = role is CiAgentRole
+                ? "Wissenschaftler"
+                : (role.Name ?? role.CustomInfo ?? string.Empty);
+
+            player.CustomInfo = visibleJobName;
             player.InfoArea |= PlayerInfoArea.CustomInfo;
             player.DisplayNickname = player.Nickname;
 
@@ -477,45 +480,23 @@ namespace FacilityJobs.Managers
 
         private static bool TryGetHeavyCorridor(out Vector3 position)
         {
-            List<Room> heavyRooms = Room.List
+            List<Room> corridors = Room.List
                 .Where(room => room != null &&
                                room.Zone == ZoneType.HeavyContainment &&
-                               IsValidZoneManagerRoom(room))
+                               IsCorridor(room.Type.ToString()))
                 .ToList();
 
-            if (heavyRooms.Count > 0)
+            if (corridors.Count == 0)
+                corridors = Room.List.Where(room => room != null && room.Zone == ZoneType.HeavyContainment).ToList();
+
+            if (corridors.Count > 0)
             {
-                Room selected = heavyRooms[UnityEngine.Random.Range(0, heavyRooms.Count)];
-                position = GetSafePosition(selected);
+                position = GetSafePosition(corridors[UnityEngine.Random.Range(0, corridors.Count)]);
                 return true;
             }
 
             position = Vector3.zero;
             return false;
-        }
-
-        private static bool IsValidZoneManagerRoom(Room room)
-        {
-            string roomName = (room.Name ?? string.Empty) + " " + room.Type;
-            string normalized = roomName.ToLowerInvariant();
-
-            if (normalized.Contains("death") ||
-                normalized.Contains("spawn") ||
-                normalized.Contains("scp"))
-                return false;
-
-            string[] scpIdentifiers =
-            {
-                "049", "079", "096", "106", "173", "939", "3114", "hcz049", "hcz079", "hcz096", "hcz106"
-            };
-
-            foreach (string identifier in scpIdentifiers)
-            {
-                if (normalized.Contains(identifier))
-                    return false;
-            }
-
-            return true;
         }
 
         private static bool TryGetSerpentsHandRoom(out Vector3 position)
