@@ -156,24 +156,13 @@ namespace FacilityJobs.Managers
             if (player == null || !player.IsConnected || role == null)
                 return;
 
-            player.CustomInfo = role.CustomInfo ?? string.Empty;
+            // Show the actual custom job name in the role tag and keep the player's
+            // real nickname visible to everyone instead of inheriting the base-role disguise.
+            player.CustomInfo = role.Name ?? role.CustomInfo ?? string.Empty;
             player.InfoArea |= PlayerInfoArea.CustomInfo;
+            player.DisplayNickname = player.Nickname;
 
-            if (role is CiAgentRole)
-            {
-                Timing.CallDelayed(0.6f, () => ReapplyCiTag(player, role));
-                Timing.CallDelayed(1.5f, () => ReapplyCiTag(player, role));
-            }
-        }
-
-        private static void ReapplyCiTag(Player player, CustomRole role)
-        {
-            if (!IsStillRole(player, role))
-                return;
-
-            player.CustomInfo = role.CustomInfo ?? "Wissenschaftler";
-            player.InfoArea |= PlayerInfoArea.CustomInfo;
-            Debug($"Reapplied CI disguise tag for {player.Nickname}.");
+            Debug($"Applied visible job tag '{player.CustomInfo}' and nickname '{player.DisplayNickname}' to {player.Nickname}.");
         }
 
         public static void ShowIntro(Player player, CustomRole role)
@@ -488,23 +477,45 @@ namespace FacilityJobs.Managers
 
         private static bool TryGetHeavyCorridor(out Vector3 position)
         {
-            List<Room> corridors = Room.List
+            List<Room> heavyRooms = Room.List
                 .Where(room => room != null &&
                                room.Zone == ZoneType.HeavyContainment &&
-                               IsCorridor(room.Type.ToString()))
+                               IsValidZoneManagerRoom(room))
                 .ToList();
 
-            if (corridors.Count == 0)
-                corridors = Room.List.Where(room => room != null && room.Zone == ZoneType.HeavyContainment).ToList();
-
-            if (corridors.Count > 0)
+            if (heavyRooms.Count > 0)
             {
-                position = GetSafePosition(corridors[UnityEngine.Random.Range(0, corridors.Count)]);
+                Room selected = heavyRooms[UnityEngine.Random.Range(0, heavyRooms.Count)];
+                position = GetSafePosition(selected);
                 return true;
             }
 
             position = Vector3.zero;
             return false;
+        }
+
+        private static bool IsValidZoneManagerRoom(Room room)
+        {
+            string roomName = (room.Name ?? string.Empty) + " " + room.Type;
+            string normalized = roomName.ToLowerInvariant();
+
+            if (normalized.Contains("death") ||
+                normalized.Contains("spawn") ||
+                normalized.Contains("scp"))
+                return false;
+
+            string[] scpIdentifiers =
+            {
+                "049", "079", "096", "106", "173", "939", "3114", "hcz049", "hcz079", "hcz096", "hcz106"
+            };
+
+            foreach (string identifier in scpIdentifiers)
+            {
+                if (normalized.Contains(identifier))
+                    return false;
+            }
+
+            return true;
         }
 
         private static bool TryGetSerpentsHandRoom(out Vector3 position)
